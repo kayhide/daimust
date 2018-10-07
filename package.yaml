@@ -1,0 +1,38 @@
+name:                daimust
+version:             0.1.0.0
+github:              "kayhide/daimust"
+license:             BSD3
+author:              "kayhide"
+maintainer:          "kayhide@gmail.com"
+copyright:           "2018 kayhide"
+
+extra-source-files:
+- README.md
+
+dependencies:
+- base
+
+library:
+  source-dirs: src
+
+executables:
+  daimust:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - daimust
+
+tests:
+  daimust-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - daimust
