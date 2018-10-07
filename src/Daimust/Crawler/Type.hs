@@ -1,6 +1,27 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Daimust.Crawler.Type
+  ( Response
+  , Dom
+  , Form (..)
+  , Input (..)
+  , Link (..)
+  , Frame (..)
+  , HasAction
+  , HasFields
+  , HasDom
+  , HasKey
+  , HasValue
+  , HasHref
+  , HasSrc
+  , action
+  , fields
+  , dom
+  , key
+  , value
+  , href
+  , src
+  )
 where
 
 import           ClassyPrelude
@@ -13,11 +34,12 @@ import qualified Text.Xml.Lens        as Xml
 
 
 type Response = Wreq.Response BL.ByteString
+type Dom = Xml.Element
 
 data Form = Form
   { _formAction :: URI
   , _formFields :: Map Text Text
-  , _formDom    :: Xml.Element
+  , _formDom    :: Dom
   } deriving (Show, Generic)
 
 makeFields ''Form
@@ -26,7 +48,7 @@ makeFields ''Form
 data Input = Input
   { _inputKey   :: Text
   , _inputValue :: Text
-  , _inputDom   :: Xml.Element
+  , _inputDom   :: Dom
   } deriving (Show, Generic)
 
 makeFields ''Input
@@ -34,7 +56,7 @@ makeFields ''Input
 
 data Link = Link
   { _linkHref :: URI
-  , _linkDom  :: Xml.Element
+  , _linkDom  :: Dom
   } deriving (Show, Generic)
 
 makeFields ''Link
@@ -42,7 +64,7 @@ makeFields ''Link
 
 data Frame = Frame
   { _frameSrc :: URI
-  , _frameDom  :: Xml.Element
+  , _frameDom :: Dom
   } deriving (Show, Generic)
 
 makeFields ''Frame

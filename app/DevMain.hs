@@ -3,8 +3,8 @@ where
 
 import           ClassyPrelude        hiding (many, some)
 
-import           Control.Lens         (at, to, (&), (.~), (?~), (^.), (^..),
-                                       (^?), (^?!), _Just)
+import           Control.Lens         (at, folding, to, universe, (&), (.~), _last,
+                                       (?~), (^.), (^..), (^?), (^?!))
 import           Network.URI
 import           Network.Wreq.Lens    (responseBody)
 import           System.Environment
@@ -32,9 +32,13 @@ main = do
   settings@Settings {..} <- readSettings
   Debug.traceShow loginUrl $ pure ()
 
-  runCrawler $ do
+  res <- runCrawler $ do
     login settings
       >>= gotoEntrance
+
+  let trs = res ^.. responseBody . html . selected "tr"
+  traverse_ (putStrLn . intercalate ", " . (^.. folding universe . text . to (unwords . words))) trs
+  traverse_ (putStrLn . unwords . words . unwords . (^.. folding universe . text)) trs
 
   pure ()
 
@@ -70,13 +74,12 @@ gotoEntrance res = do
 
   let Just src' = lastMay $ res' ^.. responseBody . html . frames . src
   res' <- get src'
-
-  traverse_ printLink $ res' ^.. responseBody . html . links
+  -- traverse_ printLink $ res' ^.. responseBody . html . links
 
   let Just link' = lastMay $ res' ^.. responseBody . html . links
   res' <- click link'
+  -- traverse_ printLink $ res' ^.. responseBody . html . links
 
-  traverse_ printLink $ res' ^.. responseBody . html . links
   pure res'
 
 

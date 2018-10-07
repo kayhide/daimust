@@ -3,20 +3,23 @@ where
 
 import           ClassyPrelude
 
-import           Control.Lens                (Fold, filtered, folded, folding,
-                                              ix, only, to, universe, view,
-                                              (^.), (^..))
+import           Control.Lens                (Fold, filtered, folded, folding, Prism', prism,
+                                              ix, only, to, universe, view, _Just,
+                                              (^.), (^?), (^..))
 import qualified Data.Map                    as Map
 import           Network.URI
 import           Text.Xml.Lens               (attr, attributed, html, name,
                                               named, text)
-import qualified Text.Xml.Lens               as Xml
 
 import           Daimust.Crawler.DomSelector
 import           Daimust.Crawler.Type
 
 
-selected :: DomSelector -> Fold Xml.Element Xml.Element
+_URI :: Prism' Text URI
+_URI = prism tshow $ \s -> maybe (Left s) Right (parseURIReference $ unpack s)
+
+
+selected :: DomSelector -> Fold Dom Dom
 selected (DomSelector factors) = folding universe . filtered' factors
   where
     filtered' [] = filtered (const True)
@@ -26,74 +29,69 @@ selected (DomSelector factors) = folding universe . filtered' factors
     filtered' (DomClass x : xs) = attributed (ix "class" . to words . folded . only x) . filtered' xs
 
 
-forms :: Fold Xml.Element Form
+forms :: Fold Dom Form
 forms = selected "form" . _Form
 
-_Form :: Fold Xml.Element Form
-_Form = to toForm . folded
+_Form :: Prism' Dom Form
+_Form = prism (^. dom) $ \s -> maybe (Left s) Right (toForm s)
 
-toForm :: Xml.Element -> Maybe Form
-toForm element = case element ^. name of
-  "form" -> Just $ Form (fromMaybe emptyUrl action') fields' element
-  _      -> Nothing
+toForm :: Dom -> Maybe Form
+toForm element = do
+  guard $ element ^. name == "form"
+  pure $ Form (fromMaybe emptyUrl action') fields' element
   where
-    action' =
-      element ^. attr "action"
-      >>= parseURIReference . unpack . unescapeHtmlEntity
+    action' = element ^? attr "action" . _Just . to unescapeHtmlEntity . _URI
 
     fields' = Map.fromList $ element ^.. inputs . to (view key &&& view value)
 
     emptyUrl = URI "" Nothing "" "" ""
 
 
-inputs :: Fold Xml.Element Input
+inputs :: Fold Dom Input
 inputs = selected "input" . _Input
 
-_Input :: Fold Xml.Element Input
-_Input = to toInput . folded
+_Input :: Prism' Dom Input
+_Input = prism (^. dom) $ \s -> maybe (Left s) Right (toInput s)
 
-toInput :: Xml.Element -> Maybe Input
-toInput element = Input <$> name' <*> pure value' <*> pure element
+toInput :: Dom -> Maybe Input
+toInput element = do
+  name' <- element ^. attr "name"
+  pure $ Input name' value' element
   where
-    name' = element ^. attr "name"
     value' = element ^. attr "value" . folded
 
 
-links :: Fold Xml.Element Link
+links :: Fold Dom Link
 links = selected "a" . _Link
 
-_Link :: Fold Xml.Element Link
-_Link = to toLink . folded
+_Link :: Prism' Dom Link
+_Link = prism (^. dom) $ \s -> maybe (Left s) Right (toLink s)
 
-toLink :: Xml.Element -> Maybe Link
-toLink element = Link <$> href' <*> pure element
-  where
-    href' =
-      element ^. attr "href"
-      >>= parseURIReference . unpack . unescapeHtmlEntity
+toLink :: Dom -> Maybe Link
+toLink element = do
+  href' <- element ^? attr "href" . _Just . to unescapeHtmlEntity . _URI
+  pure $ Link href' element
 
 
-frames :: Fold Xml.Element Frame
+frames :: Fold Dom Frame
 frames = selected "frame" . _Frame
 
-_Frame :: Fold Xml.Element Frame
-_Frame = to toFrame . folded
+_Frame :: Prism' Dom Frame
+_Frame = prism (^. dom) $ \s -> maybe (Left s) Right (toFrame s)
 
-toFrame :: Xml.Element -> Maybe Frame
-toFrame element = Frame <$> src' <*> pure element
-  where
-    src' =
-      element ^. attr "src"
-      >>= parseURIReference . unpack . unescapeHtmlEntity
+toFrame :: Dom -> Maybe Frame
+toFrame element = do
+  src' <- element ^? attr "src" . _Just . to unescapeHtmlEntity . _URI
+  pure $ Frame src' element
 
 
-domId :: (HasDom s Xml.Element) => Fold s Text
+domId :: (HasDom s Dom) => Fold s Text
 domId = dom . attr "id" . folded
 
-domClass :: (HasDom s Xml.Element) => Fold s Text
+domClass :: (HasDom s Dom) => Fold s Text
 domClass = dom . attr "class" . folded . to words . folded
 
-innerText :: (HasDom s Xml.Element) => Fold s Text
+innerText :: (HasDom s Dom) => Fold s Text
 innerText = dom . folding universe . text . to (unwords . words)
 
 
