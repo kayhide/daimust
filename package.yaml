@@ -1,16 +1,85 @@
 name:                daimust
 version:             0.1.0.0
-github:              "kayhide/daimust"
+github:              kayhide/daimust
 license:             BSD3
-author:              "kayhide"
-maintainer:          "kayhide@gmail.com"
-copyright:           "2018 kayhide"
+author:              kayhide
+maintainer:          kayhide@gmail.com
+copyright:           2018 kayhide
 
 extra-source-files:
 - README.md
 
 dependencies:
+- async
 - base
+- bytestring
+- classy-prelude
+- containers
+- deepseq
+- directory
+- exceptions
+- filepath
+- mtl
+- primitive
+- stm
+- text
+- time
+- transformers
+- typed-process
+- unliftio
+- unliftio-core
+- unordered-containers
+- vector
+- wreq
+- xml-html-conduit-lens
+- lens
+- megaparsec
+- network-uri
+- operational
+
+default-extensions:
+- AutoDeriveTypeable
+- BangPatterns
+- BinaryLiterals
+- ConstraintKinds
+- DataKinds
+- DefaultSignatures
+- DeriveAnyClass
+- DeriveDataTypeable
+- DeriveFoldable
+- DeriveFunctor
+- DeriveGeneric
+- DeriveTraversable
+- DoAndIfThenElse
+- EmptyDataDecls
+- ExistentialQuantification
+- FlexibleContexts
+- FlexibleInstances
+- FunctionalDependencies
+- GADTs
+- GeneralizedNewtypeDeriving
+- InstanceSigs
+- KindSignatures
+- LambdaCase
+- MultiParamTypeClasses
+- MultiWayIf
+- NamedFieldPuns
+- NoImplicitPrelude
+- OverloadedLists
+- OverloadedStrings
+- PartialTypeSignatures
+- PatternGuards
+- PolyKinds
+- RankNTypes
+- RecordWildCards
+- ScopedTypeVariables
+- StandaloneDeriving
+- TupleSections
+- TypeApplications
+- TypeFamilies
+- TypeOperators
+- TypeSynonymInstances
+- ViewPatterns
 
 library:
   source-dirs: src

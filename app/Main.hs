@@ -1,6 +1,9 @@
-module Main where
+module Main
+where
 
-import Lib
+import ClassyPrelude
+
+import Daimust
 
 main :: IO ()
-main = someFunc
+main = run
