@@ -27,8 +27,8 @@ data Settings =
   deriving (Eq, Show)
 
 
-main :: IO ()
-main = do
+run :: IO ()
+run = do
   settings@Settings {..} <- readSettings
   Debug.traceShow loginUrl $ pure ()
 
