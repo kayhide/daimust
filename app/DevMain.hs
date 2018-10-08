@@ -3,8 +3,8 @@ where
 
 import           ClassyPrelude        hiding (many, some)
 
-import           Control.Lens         (at, folding, to, universe, (&), (.~), _last,
-                                       (?~), (^.), (^..), (^?), (^?!))
+import           Control.Lens         (at, folded, folding, to, universe, (&),
+                                       (.~), (?~), (^.), (^..), (^?), (^?!))
 import           Network.URI
 import           Network.Wreq.Lens    (responseBody)
 import           System.Environment
@@ -36,9 +36,8 @@ run = do
     login settings
       >>= gotoEntrance
 
-  let trs = res ^.. responseBody . html . selected "tr"
-  traverse_ (putStrLn . intercalate ", " . (^.. folding universe . text . to (unwords . words))) trs
-  traverse_ (putStrLn . unwords . words . unwords . (^.. folding universe . text)) trs
+  let tables = fmap parseTable . lastMay $ res ^.. responseBody . html . selected "table"
+  void $ (traverse . traverse) (putStrLn . unwords) tables
 
   pure ()
 
@@ -89,3 +88,12 @@ readSettings = do
   username <- pack <$> getEnv "DAIM_USERNAME"
   password <- pack <$> getEnv "DAIM_PASSWORD"
   pure Settings {..}
+
+
+parseTable :: Dom -> [[Text]]
+parseTable table = do
+  tr <- table ^.. selected "tr"
+  pure $ do
+    td <- tr ^.. selected "td"
+    let text' = td ^. folding universe . text
+    pure $ bool "__" (unwords $ words text') ((length . filter (not . null . concat . words) $ lines text') == 1)
