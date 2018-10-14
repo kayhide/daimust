@@ -5,6 +5,7 @@ import           ClassyPrelude        hiding (many, some)
 
 import           Control.Lens         (at, folded, folding, to, universe, (&),
                                        (.~), (?~), (^.), (^..), (^?), (^?!))
+import           Data.Default         (def)
 import           Network.URI
 import           Network.Wreq.Lens    (responseBody)
 import           System.Environment
@@ -16,6 +17,7 @@ import           Debug.Trace          as Debug
 
 import           Daimust
 import           Daimust.Crawler
+import           Daimust.Display
 
 
 data Settings =
@@ -26,6 +28,13 @@ data Settings =
   }
   deriving (Eq, Show)
 
+hoursTable :: DisplayTableConfig
+hoursTable =
+  def
+  { headerRows = [0]
+  , dropRows = [1, 2]
+  , pickColumns = Just [0, 1, 10, 12]
+  }
 
 run :: IO ()
 run = do
@@ -36,8 +45,8 @@ run = do
     login settings
       >>= gotoEntrance
 
-  let tables = fmap parseTable . lastMay $ res ^.. responseBody . html . selected "table"
-  void $ (traverse . traverse) (putStrLn . unwords) tables
+  let tables = res ^.. responseBody . html . selected "table" . to parseTable
+  traverse_ (displayTableWith hoursTable) $ lastMay tables
 
   pure ()
 
@@ -96,4 +105,4 @@ parseTable table = do
   pure $ do
     td <- tr ^.. selected "td"
     let text' = td ^. folding universe . text
-    pure $ bool "__" (unwords $ words text') ((length . filter (not . null . concat . words) $ lines text') == 1)
+    pure $ bool "" (unwords $ words text') ((length . filter (not . null . concat . words) $ lines text') == 1)
