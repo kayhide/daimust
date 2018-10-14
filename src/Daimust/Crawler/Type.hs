@@ -3,6 +3,7 @@
 module Daimust.Crawler.Type
   ( Response
   , Dom
+  , URI
   , Form (..)
   , Input (..)
   , Link (..)

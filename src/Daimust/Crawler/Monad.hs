@@ -1,6 +1,9 @@
 module Daimust.Crawler.Monad
   ( Crawler
+  , State
   , runCrawler
+  , getState
+  , putState
   , currentUrl
   , get
   , submit
@@ -35,6 +38,9 @@ data CrawlerI a where
   Submit :: Form -> CrawlerI Response
   Click :: Link -> CrawlerI Response
 
+  GetState :: CrawlerI State
+  PutState :: State -> CrawlerI ()
+
   PrintElement :: Xml.Element -> CrawlerI ()
   PrintForm :: Form -> CrawlerI ()
   PrintLink :: Link -> CrawlerI ()
@@ -65,7 +71,7 @@ runCrawler' state@State {..} = eval . Op.view
 
     eval (CurrentUrl :>>= k) =
       pure url
-      >>= runCrawler' State {..} . k
+      >>= runCrawler' state . k
 
     eval (Get url' :>>= k) =
       Session.get session (show url')
@@ -84,6 +90,13 @@ runCrawler' state@State {..} = eval . Op.view
       >>= runCrawler' State { url = url', .. } . k
       where
         url' = link' ^. href
+
+    eval (GetState :>>= k) =
+      pure state
+      >>= runCrawler' state . k
+
+    eval (PutState state' :>>= k) =
+      runCrawler' state' $ k ()
 
     eval (PrintElement elm :>>= k) =
       printElement' elm
@@ -125,6 +138,14 @@ printForm = Op.singleton . PrintForm
 printLink :: Link -> Crawler ()
 printLink = Op.singleton . PrintLink
 
+
+-- * State management
+
+getState :: Crawler State
+getState = Op.singleton GetState
+
+putState :: State -> Crawler ()
+putState = Op.singleton . PutState
 
 -- * For debug
 
