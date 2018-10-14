@@ -1,4 +1,16 @@
 module Daimust.Client
+  ( Settings (..)
+  , Attendance (..)
+  , Client
+  , newClient
+  , ClientMonad
+  , runClient
+  , evalClient
+  , execClient
+  , authenticate
+  , headerTexts
+  , listAttendances
+  )
 where
 
 import           ClassyPrelude        hiding (many, some)
@@ -6,6 +18,8 @@ import           ClassyPrelude        hiding (many, some)
 import           Control.Lens         (at, folded, folding, indices, ix, to,
                                        traversed, universe, (&), (.~), (?~),
                                        (^.), (^..), (^?), (^?!))
+import           Control.Monad.State  (StateT, evalStateT, execStateT, get, put,
+                                       runStateT)
 import           Data.Default         (def)
 import           Network.URI          (parseURIReference)
 import           Network.Wreq.Lens    (responseBody)
@@ -15,12 +29,14 @@ import           Text.Xml.Lens
 
 import           Debug.Trace          as Debug
 
-import           Daimust.Crawler
+import           Daimust.Crawler      (Crawler, Dom, Response, URI, action,
+                                       fields, forms, frames, getState, links,
+                                       putState, runCrawler, selected, src)
 import qualified Daimust.Crawler      as Crawler
 import           Daimust.Display
 
 
--- * Data types
+-- * Public data types
 
 data Settings =
   Settings
@@ -29,15 +45,6 @@ data Settings =
   , password :: Text
   }
   deriving (Eq, Show)
-
-
-data Client =
-  Client
-  { settings :: Settings
-  , basePage :: Maybe Response
-  , state    :: Crawler.State
-  , verbose  :: Bool
-  }
 
 
 data Attendance =
@@ -50,6 +57,7 @@ data Attendance =
   }
   deriving (Eq, Show)
 
+
 -- * Table config
 
 attendancesTable :: DisplayTableConfig
@@ -60,33 +68,64 @@ attendancesTable =
   , pickColumns = Just [0, 1, 10, 12]
   }
 
--- * Operations
+
+-- * Client data type
+
+data Client =
+  Client
+  { settings :: Settings
+  , basePage :: Maybe Response
+  , state    :: Crawler.State
+  , verbose  :: Bool
+  }
 
 newClient :: Settings -> IO Client
 newClient settings = do
   state <- runCrawler getState
   pure Client { basePage = Nothing, verbose = True, ..}
 
-authenticate :: Client -> IO Client
-authenticate Client {..} = do
-  runCrawler $ do
-    res <-
-      login settings
-      >>= gotoEntrance
-    state' <- getState
-    pure Client { basePage = Just res, state = state', .. }
 
-headerTexts :: Client -> [Text]
-headerTexts Client {..} = fromMaybe (pure []) $ do
-  page <- basePage
-  table <- lastMay $ page ^.. responseBody . html . selected "table"
-  let DisplayTableConfig { headerRows } = attendancesTable
-  pure $ (table ^.. selected "tr") ^.. traversed . indices (`elem` headerRows) . to (unwords . rowTexts)
+-- * Client monad
+
+type ClientMonad a = StateT Client IO a
+
+runClient :: ClientMonad a -> Client -> IO (a, Client)
+runClient = runStateT
+
+evalClient :: ClientMonad a -> Client -> IO a
+evalClient = evalStateT
+
+execClient :: ClientMonad a -> Client -> IO Client
+execClient = execStateT
 
 
-listAttendances :: Client -> [Attendance]
-listAttendances Client {..} = do
-  fromMaybe [] $ do
+-- * Operations
+
+authenticate :: ClientMonad ()
+authenticate = do
+  Client {..} <- get
+  when (basePage == Nothing) $ do
+    client' <- liftIO $ runCrawler $ do
+      res <- gotoEntrance =<< login settings
+      state' <- getState
+      pure Client { basePage = Just res, state = state', .. }
+    put client'
+
+headerTexts :: ClientMonad [Text]
+headerTexts = do
+  authenticate
+  Client {..} <- get
+  pure $ fromMaybe (pure []) $ do
+    page <- basePage
+    table <- lastMay $ page ^.. responseBody . html . selected "table"
+    let DisplayTableConfig { headerRows } = attendancesTable
+    pure $ (table ^.. selected "tr") ^.. traversed . indices (`elem` headerRows) . to (unwords . rowTexts)
+
+listAttendances :: ClientMonad [Attendance]
+listAttendances = do
+  authenticate
+  Client {..} <- get
+  pure $ fromMaybe [] $ do
     page <- basePage
     table <- lastMay $ page ^.. responseBody . html . selected "table"
     pure . catMaybes $ parseItem <$> table ^.. selected "tr"
@@ -96,19 +135,19 @@ listAttendances Client {..} = do
 
 login :: Settings -> Crawler Response
 login Settings {..} = do
-  res <- get loginUrl
+  res <- Crawler.get loginUrl
   let form = res ^?! responseBody . html . forms
       form' = form
               & fields . at "PN_ID" ?~ username
               & fields . at "PN_PASS" ?~ password
-  submit form'
+  Crawler.submit form'
 
 gotoEntrance :: Response -> Crawler Response
 gotoEntrance res = do
   res1 <- do
     let form' = res ^?! responseBody . html . forms
                 & fields . at "ACTION" ?~ "3"
-    submit form'
+    Crawler.submit form'
 
   res2 <- do
     let onloadP = do
@@ -127,16 +166,16 @@ gotoEntrance res = do
                 & action .~ action'
                 & fields . at "pn0001" ?~ username
                 & fields . at "pn0002" ?~ password
-    submit form'
+    Crawler.submit form'
 
   res3 <- do
     let Just src' = lastMay $ res2 ^.. responseBody . html . frames . src
-    get src'
+    Crawler.get src'
   -- traverse_ printLink $ res3 ^.. responseBody . html . links
 
   res4 <- do
     let Just link' = lastMay $ res3 ^.. responseBody . html . links
-    click link'
+    Crawler.click link'
   -- traverse_ printLink $ res4 ^.. responseBody . html . links
   -- traverse_ printForm $ res4 ^.. responseBody . html . forms
 

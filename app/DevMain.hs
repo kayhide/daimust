@@ -13,12 +13,13 @@ import           Daimust.Client
 
 run :: IO ()
 run = do
-  client <-
-    readSettings
-    >>= newClient
-    >>= authenticate
-  traverse_ putStrLn $ headerTexts client
-  traverse_ (putStrLn . formatAttendence) $ listAttendances client
+  client <- newClient =<< readSettings
+  flip runClient client $ do
+    headers <- headerTexts
+    attendances <- listAttendances
+    liftIO $ do
+      traverse_ putStrLn $ headers
+      traverse_ (putStrLn . formatAttendence) $ attendances
 
   pure ()
 
