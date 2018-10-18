@@ -10,29 +10,34 @@ module Daimust.Client
   , authenticate
   , headerTexts
   , listAttendances
+  , updateAttendance
+  , deleteAttendance
   )
 where
 
-import           ClassyPrelude        hiding (many, some)
+import           ClassyPrelude           hiding (many, some)
 
-import           Control.Lens         (at, folded, folding, indices, ix, to,
-                                       traversed, universe, (&), (.~), (?~),
-                                       (^.), (^..), (^?), (^?!))
-import           Control.Monad.State  (StateT, evalStateT, execStateT, get, put,
-                                       runStateT)
-import           Data.Default         (def)
-import           Network.URI          (parseURIReference)
-import           Network.Wreq.Lens    (responseBody)
+import           Control.Lens            (at, folded, folding, indices, ix,
+                                          only, to, traversed, universe, (&),
+                                          (...), (.~), (?~), (^.), (^..), (^?),
+                                          (^?!), _Just, _last)
+import           Control.Monad.State     (StateT, evalStateT, execStateT, get,
+                                          put, runStateT)
+import           Data.Default            (def)
+import           Network.URI             (parseURIReference)
+import           Network.Wreq.Lens       (responseBody)
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import           Text.Xml.Lens
 
-import           Debug.Trace          as Debug
+import           Debug.Trace             as Debug
 
-import           Daimust.Crawler      (Crawler, Dom, Response, URI, action,
-                                       fields, forms, frames, getState, links,
-                                       putState, runCrawler, selected, src)
-import qualified Daimust.Crawler      as Crawler
+import           Daimust.Crawler         (Crawler, Dom, Response, URI, action,
+                                          fields, forms, frames, getState, dom,
+                                          links, printForm, putState,
+                                          runCrawler, selected, src)
+import qualified Daimust.Crawler         as Crawler
+import           Daimust.Data.Attendance (Attendance (..), parseHours)
 import           Daimust.Display
 
 
@@ -43,17 +48,6 @@ data Settings =
   { loginUrl :: URI
   , username :: Text
   , password :: Text
-  }
-  deriving (Eq, Show)
-
-
-data Attendance =
-  Attendance
-  { date  :: Text
-  , day   :: Text
-  , dow   :: Text
-  , hours :: Text
-  , note  :: Text
   }
   deriving (Eq, Show)
 
@@ -101,35 +95,55 @@ execClient = execStateT
 
 -- * Operations
 
-authenticate :: ClientMonad ()
+authenticate :: ClientMonad Response
 authenticate = do
   Client {..} <- get
-  when (basePage == Nothing) $ do
-    client' <- liftIO $ runCrawler $ do
-      res <- gotoEntrance =<< login settings
-      state' <- getState
-      pure Client { basePage = Just res, state = state', .. }
-    put client'
+  case basePage of
+    Nothing -> do
+      (client', res) <- liftIO $ runCrawler $ do
+        res <- gotoEntrance =<< login settings
+        state' <- getState
+        pure (Client { basePage = Just res, state = state', .. }, res)
+      put client'
+      pure res
+    Just res -> pure res
 
 headerTexts :: ClientMonad [Text]
 headerTexts = do
-  authenticate
-  Client {..} <- get
+  page <- authenticate
   pure $ fromMaybe (pure []) $ do
-    page <- basePage
     table <- lastMay $ page ^.. responseBody . html . selected "table"
     let DisplayTableConfig { headerRows } = attendancesTable
     pure $ (table ^.. selected "tr") ^.. traversed . indices (`elem` headerRows) . to (unwords . rowTexts)
 
 listAttendances :: ClientMonad [Attendance]
 listAttendances = do
-  authenticate
-  Client {..} <- get
+  page <- authenticate
   pure $ fromMaybe [] $ do
-    page <- basePage
     table <- lastMay $ page ^.. responseBody . html . selected "table"
     pure . catMaybes $ parseItem <$> table ^.. selected "tr"
 
+updateAttendance :: Attendance -> ClientMonad ()
+updateAttendance att = do
+  page <- authenticate
+  Client { .. } <- get
+  client' <- liftIO $ runCrawler $ do
+    putState state
+    res <- postUpdate att page
+    state' <- getState
+    pure Client { basePage = Just res, state = state', .. }
+  put client'
+
+deleteAttendance :: Attendance -> ClientMonad ()
+deleteAttendance att = do
+  page <- authenticate
+  Client { .. } <- get
+  client' <- liftIO $ runCrawler $ do
+    putState state
+    res <- postDelete att page
+    state' <- getState
+    pure Client { basePage = Just res, state = state', .. }
+  put client'
 
 -- * Low level functions
 
@@ -182,6 +196,67 @@ gotoEntrance res = do
   pure res4
 
 
+findForm :: Text -> Response -> Crawler.Form
+findForm name res =
+  res ^?! responseBody . html . selected "form" . attributed (ix "name" . only name) . forms
+
+
+postUpdate :: Attendance -> Response -> Crawler Response
+postUpdate Attendance {..} res = do
+  let form02 = findForm "form02" res
+  let form' = form02
+              & fields . at "pn10s01" ?~ date <> ","
+              & fields . at "pn10s02" ?~ date <> ","
+              & fields . at "pn10s03" .~ (form02 ^. fields . at "TEMP_pn00011")
+              & fields . at "pn10s04" .~ (form02 ^. fields . at "TEMP_pn10009")
+              & fields . at "pn10s05" ?~ ","
+              & fields . at "pn10s06" ?~ "off,"
+              & fields . at "pn10s06t" ?~ "off,"
+              & fields . at "pn10s07" ?~ ","
+              & fields . at "pn10s07t" ?~ ","
+              & fields . at "pn10s08" ?~ ","
+              & fields . at "pn10s08t" ?~ ","
+              & fields . at "pn10s09" ?~ date <> enter <> ","
+              & fields . at "pn10s10" ?~ leave <> ","
+              & fields . at "pn10s11" ?~ noteValue <> ","
+              & fields . at "pn10s14" ?~ ","
+              & fields . at "pn10s15" ?~ ","
+              & fields . at "pn10s28" ?~ ","
+              & fields . at "pn10s29" ?~ ","
+              & fields . at "pn10s30" ?~ ","
+              & fields . at "pn10s31" ?~ ","
+              & fields . at "pn10s32" ?~ ","
+              & fields . at "pn10s33" ?~ ","
+              & fields . at "pn10s35" ?~ ","
+              & fields . at "pn10s38" ?~ ","
+  Crawler.submit form'
+
+postDelete :: Attendance -> Response -> Crawler Response
+postDelete Attendance {..} = predelete' >=> delete'
+  where
+    predelete' res' = do
+      let form01 = findForm "form01" res'
+      let form02 = findForm "form02" res'
+      let form' = form01
+                  & fields . at "pn00010" ?~ date
+                  & fields . at "pn00011" .~ (form02 ^. fields . at "TEMP_pn00011")
+                  & fields . at "pn00012" ?~ date <> enter <> "00"
+                  & fields . at "pn10009" .~ (form02 ^. fields . at "TEMP_pn10009")
+                  & fields . at "pn10102" ?~ "mishonin"
+      Crawler.submit form'
+
+    delete' res' = do
+      let form01 = findForm "form01" res'
+      let form02 = findForm "form02" res'
+      let form' = form01
+                  & fields . at "pn00010" ?~ date
+                  & fields . at "pn00011" .~ (form02 ^. fields . at "TEMP_pn00011")
+                  & fields . at "pn00012" ?~ date <> enter <> "00"
+                  & fields . at "pn10009" .~ (form02 ^. fields . at "TEMP_pn10009")
+                  & fields . at "pn10102" ?~ "rec_del"
+      Crawler.submit form'
+
+
 
 rowTexts :: Dom -> [Text]
 rowTexts tr = do
@@ -197,7 +272,9 @@ parseItem tr = headMay . catMaybes $ do
     day <- cells ^? ix 0
     dow <- cells ^? ix 1
     hours <- cells ^? ix 10
-    note <- cells ^? ix 12
+    let (enter, leave) = fromMaybe ("", "") $ parseHours hours
+    let noteValue = fromMaybe "" $ (tr ^.. selected "td") ^. ix 12 . selected "input" . attr "value"
+    noteLabel <- cells ^? ix 12
     flip (parseMaybe @()) comment $ do
       between (space *> string "ymd[") (string "]" *> space) $ do
         y <- some digitChar <* char '-'

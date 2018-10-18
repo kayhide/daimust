@@ -160,7 +160,7 @@ printForm' form = do
     , form ^. domClass . to ("." <>)
     ]
   print $ form ^. action
-  print $ form ^. fields
+  traverse_ print $ Map.toAscList $ form ^. fields
   -- print' $ form ^. dom
   putStrLn ""
 
