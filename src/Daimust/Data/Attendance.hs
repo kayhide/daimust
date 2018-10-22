@@ -1,11 +1,14 @@
 module Daimust.Data.Attendance
   ( Attendance (..)
+  , formatAttendance
   , parseHours
   )
 where
 
 import           ClassyPrelude        hiding (many, some)
 
+import           Formatting           (bprint, center, later, left, sformat,
+                                       stext, (%), (%.))
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 
@@ -29,6 +32,21 @@ data Attendance =
 
 
 -- * Helper functions
+
+-- | Format attendence data into @Text@.
+
+formatAttendance :: Attendance -> Text
+formatAttendance Attendance {..} =
+  sformat
+  ( (left 4 ' ' %. stext) %
+    (left 4 ' ' %. stext) %
+    " " % (center 15 ' ' %. (stext % " - " % stext)) %
+    " " % stext %
+    (later (\s -> bool (bprint (" (" % stext % ")") s) "" $ null s))
+  ) day dow enter leave noteLabel noteValue
+
+
+-- | Parse hours cell @Text@ into enter and leave values.
 
 parseHours :: Text -> Maybe (AttendanceEnter, AttendanceLeave)
 parseHours hours = flip (parseMaybe @()) hours $ do

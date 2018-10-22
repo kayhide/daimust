@@ -21,7 +21,12 @@ dependencies:
 - exceptions
 - filepath
 - formatting
+- lens
+- megaparsec
 - mtl
+- network-uri
+- operational
+- optparse-applicative
 - primitive
 - stm
 - text
@@ -34,10 +39,6 @@ dependencies:
 - vector
 - wreq
 - xml-html-conduit-lens
-- lens
-- megaparsec
-- network-uri
-- operational
 
 default-extensions:
 - AutoDeriveTypeable

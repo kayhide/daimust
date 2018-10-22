@@ -7,6 +7,8 @@ module Daimust.Client
   , runClient
   , evalClient
   , execClient
+  , setVerbose
+  , isVerbose
   , authenticate
   , headerTexts
   , listAttendances
@@ -22,7 +24,7 @@ import           Control.Lens            (at, folded, folding, indices, ix,
                                           (...), (.~), (?~), (^.), (^..), (^?),
                                           (^?!), _Just, _last)
 import           Control.Monad.State     (StateT, evalStateT, execStateT, get,
-                                          put, runStateT)
+                                          gets, modify, put, runStateT)
 import           Data.Default            (def)
 import           Network.URI             (parseURIReference)
 import           Network.Wreq.Lens       (responseBody)
@@ -33,7 +35,7 @@ import           Text.Xml.Lens
 import           Debug.Trace             as Debug
 
 import           Daimust.Crawler         (Crawler, Dom, Response, URI, action,
-                                          fields, forms, frames, getState, dom,
+                                          dom, fields, forms, frames, getState,
                                           links, printForm, putState,
                                           runCrawler, selected, src)
 import qualified Daimust.Crawler         as Crawler
@@ -94,6 +96,13 @@ execClient = execStateT
 
 
 -- * Operations
+
+setVerbose :: Bool -> ClientMonad ()
+setVerbose b =
+  modify $ \client -> client { verbose = b }
+
+isVerbose :: ClientMonad Bool
+isVerbose = gets verbose
 
 authenticate :: ClientMonad Response
 authenticate = do
