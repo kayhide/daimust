@@ -11,6 +11,7 @@ module Daimust.Client
   , isVerbose
   , authenticate
   , headerTexts
+  , moveToPeriod
   , listAttendances
   , updateAttendance
   , deleteAttendance
@@ -28,6 +29,7 @@ import           Control.Monad.State     (StateT, evalStateT, execStateT, get,
 import           Data.Default            (def)
 import           Network.URI             (parseURIReference)
 import           Network.Wreq.Lens       (responseBody)
+import           System.IO.Unsafe        (unsafePerformIO)
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import           Text.Xml.Lens
@@ -39,7 +41,8 @@ import           Daimust.Crawler         (Crawler, Dom, Response, URI, action,
                                           links, printForm, putState,
                                           runCrawler, selected, src)
 import qualified Daimust.Crawler         as Crawler
-import           Daimust.Data.Attendance (Attendance (..), parseHours)
+import           Daimust.Data.Attendance (Attendance (..), AttendancePeriod,
+                                          parseHours)
 import           Daimust.Display
 
 
@@ -78,7 +81,7 @@ data Client =
 newClient :: Settings -> IO Client
 newClient settings = do
   state <- runCrawler getState
-  pure Client { basePage = Nothing, verbose = True, ..}
+  pure Client { basePage = Nothing, verbose = False, ..}
 
 
 -- * Client monad
@@ -109,6 +112,7 @@ authenticate = do
   Client {..} <- get
   case basePage of
     Nothing -> do
+      sayInfo "Authenticating"
       (client', res) <- liftIO $ runCrawler $ do
         res <- gotoEntrance =<< login settings
         state' <- getState
@@ -125,17 +129,32 @@ headerTexts = do
     let DisplayTableConfig { headerRows } = attendancesTable
     pure $ (table ^.. selected "tr") ^.. traversed . indices (`elem` headerRows) . to (unwords . rowTexts)
 
+moveToPeriod :: AttendancePeriod -> ClientMonad ()
+moveToPeriod period = do
+  page <- authenticate
+  let current = getPeriod page
+  when (current /= Just period) $ do
+    Client {..} <- get
+    client' <- liftIO $ runCrawler $ do
+      putState state
+      res <- gotoPeriod period page
+      state' <- getState
+      pure Client { basePage = Just res, state = state', .. }
+    put client'
+
 listAttendances :: ClientMonad [Attendance]
 listAttendances = do
   page <- authenticate
   pure $ fromMaybe [] $ do
+    period <- getPeriod page
     table <- lastMay $ page ^.. responseBody . html . selected "table"
-    pure . catMaybes $ parseItem <$> table ^.. selected "tr"
+    pure . catMaybes $ parseItem period <$> table ^.. selected "tr"
 
 updateAttendance :: Attendance -> ClientMonad ()
-updateAttendance att = do
+updateAttendance att@Attendance { date } = do
   page <- authenticate
   Client { .. } <- get
+  sayInfo $ "Updating: Attendane #" <> date
   client' <- liftIO $ runCrawler $ do
     putState state
     res <- postUpdate att page
@@ -144,9 +163,10 @@ updateAttendance att = do
   put client'
 
 deleteAttendance :: Attendance -> ClientMonad ()
-deleteAttendance att = do
+deleteAttendance att@Attendance { date } = do
   page <- authenticate
   Client { .. } <- get
+  sayInfo $ "Deleting: Attendance #" <> date
   client' <- liftIO $ runCrawler $ do
     putState state
     res <- postDelete att page
@@ -154,7 +174,17 @@ deleteAttendance att = do
     pure Client { basePage = Just res, state = state', .. }
   put client'
 
--- * Low level functions
+
+-- * Logging functions
+
+sayInfo :: Text -> ClientMonad ()
+sayInfo msg = do
+  Client { verbose } <- get
+  when verbose $ do
+    liftIO $ putStrLn msg
+
+
+-- * Crawler actions
 
 login :: Settings -> Crawler Response
 login Settings {..} = do
@@ -203,11 +233,6 @@ gotoEntrance res = do
   -- traverse_ printForm $ res4 ^.. responseBody . html . forms
 
   pure res4
-
-
-findForm :: Text -> Response -> Crawler.Form
-findForm name res =
-  res ^?! responseBody . html . selected "form" . attributed (ix "name" . only name) . forms
 
 
 postUpdate :: Attendance -> Response -> Crawler Response
@@ -266,6 +291,28 @@ postDelete Attendance {..} = predelete' >=> delete'
       Crawler.submit form'
 
 
+gotoPeriod :: AttendancePeriod -> Response -> Crawler Response
+gotoPeriod (year, month) res = do
+  let form01 = findForm "form01" res
+  let form' = form01
+              & fields . at "pn10100" ?~ year
+              & fields . at "pn10101" ?~ month
+              & fields . at "pn10102" ?~ "search"
+  Crawler.submit form'
+
+
+-- * Helper functions
+
+findForm :: Text -> Response -> Crawler.Form
+findForm name res =
+  res ^?! responseBody . html . selected "form" . attributed (ix "name" . only name) . forms
+
+getPeriod :: Response -> Maybe AttendancePeriod
+getPeriod res = do
+  let form01 = findForm "form01" res
+  year <- form01 ^. fields . at "pn10100"
+  month <- form01 ^. fields . at "pn10101"
+  pure $ (year, month)
 
 rowTexts :: Dom -> [Text]
 rowTexts tr = do
@@ -273,8 +320,8 @@ rowTexts tr = do
   let text' = td ^. folding universe . text
   pure $ bool "" (unwords $ words text') ((length . filter (not . null . concat . words) $ lines text') == 1)
 
-parseItem :: Dom -> Maybe Attendance
-parseItem tr = headMay . catMaybes $ do
+parseItem :: AttendancePeriod -> Dom -> Maybe Attendance
+parseItem period tr = headMay . catMaybes $ do
   comment <- tr ^.. selected "" . comments
   pure $ do
     let cells = rowTexts tr

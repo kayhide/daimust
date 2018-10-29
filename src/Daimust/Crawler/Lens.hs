@@ -42,7 +42,16 @@ toForm element = do
   where
     action' = element ^? attr "action" . _Just . to unescapeHtmlEntity . _URI
 
-    fields' = Map.fromList $ element ^.. inputs . to (view key &&& view value)
+    fields' = Map.fromList $ inputs' <> options'
+    inputs' = element ^.. inputs . to (view key &&& view value)
+
+    selects' = element ^.. selected "select" . attributed (ix "name")
+    options' = do
+      e <- selects'
+      maybe [] pure $ do
+        k <- e ^. attr "name"
+        v <- e ^. selected "option" . attributed (ix "selected") . attr "value"
+        pure (k, v)
 
     emptyUrl = URI "" Nothing "" "" ""
 

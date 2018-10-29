@@ -1,5 +1,6 @@
 module Daimust.Data.Attendance
   ( Attendance (..)
+  , AttendancePeriod
   , formatAttendance
   , parseHours
   )
@@ -18,9 +19,12 @@ import           Text.Megaparsec.Char
 type AttendanceEnter = Text
 type AttendanceLeave = Text
 
+type AttendancePeriod = (Text, Text)
+
 data Attendance =
   Attendance
-  { date      :: Text
+  { period    :: AttendancePeriod
+  , date      :: Text
   , day       :: Text
   , dow       :: Text
   , enter     :: AttendanceEnter
