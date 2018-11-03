@@ -1,8 +1,18 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Daimust.Data.Attendance
   ( Attendance (..)
   , AttendanceEnter
   , AttendanceLeave
   , AttendancePeriod
+  , period
+  , date
+  , day
+  , dow
+  , enter
+  , leave
+  , noteValue
+  , noteLabel
+  , color
   , formatAttendance
   , parseHours
   , periodP
@@ -11,6 +21,7 @@ where
 
 import           ClassyPrelude        hiding (many, some)
 
+import           Control.Lens         (makeLenses)
 import           Formatting           (bprint, center, later, left, sformat,
                                        stext, (%), (%.))
 import           Text.Megaparsec
@@ -26,17 +37,19 @@ type AttendancePeriod = (Text, Text)
 
 data Attendance =
   Attendance
-  { period    :: AttendancePeriod
-  , date      :: Text
-  , day       :: Text
-  , dow       :: Text
-  , enter     :: AttendanceEnter
-  , leave     :: AttendanceLeave
-  , noteValue :: Text
-  , noteLabel :: Text
-  , color     :: Text
+  { _period    :: AttendancePeriod
+  , _date      :: Text
+  , _day       :: Text
+  , _dow       :: Text
+  , _enter     :: AttendanceEnter
+  , _leave     :: AttendanceLeave
+  , _noteValue :: Text
+  , _noteLabel :: Text
+  , _color     :: Text
   }
   deriving (Eq, Show)
+
+makeLenses ''Attendance
 
 
 -- * Helper functions
@@ -44,14 +57,14 @@ data Attendance =
 -- | Format attendence data into @Text@.
 
 formatAttendance :: Attendance -> Text
-formatAttendance Attendance {..} =
+formatAttendance (Attendance _ _ day' dow' enter' leave' noteValue' noteLabel' _) =
   sformat
   ( (left 4 ' ' %. stext) %
     (left 4 ' ' %. stext) %
     " " % (center 15 ' ' %. (stext % " - " % stext)) %
     " " % stext %
     (later (\s -> bool (bprint (" (" % stext % ")") s) "" $ null s))
-  ) day dow enter leave noteLabel noteValue
+  ) day' dow' enter' leave' noteLabel' noteValue'
 
 
 -- | Parse hours cell @Text@ into enter and leave values.

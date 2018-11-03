@@ -7,6 +7,7 @@ where
 
 import           ClassyPrelude
 
+import           Control.Lens            (filtered, (&), (.~), (^.), (^..))
 import           Options.Applicative
 import           Text.Megaparsec         (parseMaybe)
 
@@ -14,18 +15,17 @@ import           Daimust.Cli.Utils       (readSettings)
 import           Daimust.Client          (ClientMonad, listAttendances,
                                           moveToPeriod, newClient, runClient,
                                           setVerbose, updateAttendance)
-import           Daimust.Data.Attendance (Attendance (..), AttendanceEnter,
-                                          AttendanceLeave, periodP)
+import           Daimust.Data.Attendance
 
 
 data Args =
   Args
-  { day       :: Text
-  , enter     :: Text
-  , leave     :: Text
-  , noteValue :: Maybe Text
-  , period    :: Maybe Text
-  , verbose   :: Bool
+  { _day       :: Text
+  , _enter     :: Text
+  , _leave     :: Text
+  , _noteValue :: Maybe Text
+  , _period    :: Maybe Text
+  , _verbose   :: Bool
   }
   deriving (Show)
 
@@ -52,18 +52,17 @@ run :: Args -> IO ()
 run Args {..} = do
   client <- newClient =<< readSettings
   void $ flip runClient client $ do
-    setVerbose verbose
-    let period' = parseMaybe periodP =<< period
+    setVerbose _verbose
+    let period' = parseMaybe periodP =<< _period
     maybe (pure ()) moveToPeriod period'
     attendances <- listAttendances
-    let day' = day
-    let att = find (\ Attendance { day } ->  day == day') attendances
-    maybe (pure ()) (update' enter leave noteValue) att
+    let att = headMay $ attendances ^.. traverse . filtered ((== _day) . (^. day))
+    maybe (pure ()) (update' _enter _leave _noteValue) att
 
 update' :: AttendanceEnter -> AttendanceLeave -> Maybe Text -> Attendance -> ClientMonad ()
-update' enter' leave' noteValue' Attendance {..} = do
-  let enter = enter'
-  let leave = leave'
-  let noteValue = fromMaybe "00" noteValue'
-  updateAttendance $ Attendance {..}
+update' enter' leave' noteValue' att =
+  updateAttendance $ att
+  & enter .~ enter'
+  & leave .~ leave'
+  & noteValue .~ fromMaybe "00" noteValue'
 

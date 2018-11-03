@@ -7,6 +7,7 @@ where
 
 import           ClassyPrelude
 
+import           Control.Lens            ((^.))
 import           Data.List.Split         (chunksOf)
 import           Options.Applicative
 import           System.Console.ANSI     (Color (..), ColorIntensity (..),
@@ -17,14 +18,13 @@ import           Daimust.Cli.Utils       (readSettings)
 import           Daimust.Client          (headerTexts, listAttendances,
                                           moveToPeriod, newClient, runClient,
                                           setVerbose)
-import           Daimust.Data.Attendance (Attendance (..), formatAttendance,
-                                          periodP)
+import           Daimust.Data.Attendance
 
 
 data Args =
   Args
-  { period  :: Maybe Text
-  , verbose :: Bool
+  { _period  :: Maybe Text
+  , _verbose :: Bool
   }
   deriving (Show)
 
@@ -43,18 +43,18 @@ run :: Args -> IO ()
 run Args {..} = do
   client <- newClient =<< readSettings
   void $ flip runClient client $ do
-    setVerbose verbose
-    let period' = parseMaybe periodP =<< period
+    setVerbose _verbose
+    let period' = parseMaybe periodP =<< _period
     maybe (pure ()) moveToPeriod period'
     headers <- headerTexts
     attendances <- listAttendances
     liftIO $ do
       traverse_ putStrLn headers
-      traverse_ printAttendance attendances
+      traverse_ print' attendances
 
-printAttendance :: Attendance -> IO ()
-printAttendance att@Attendance {..} = do
-  case (chunksOf 2 . unpack $ drop 1 color) of
+print' :: Attendance -> IO ()
+print' att = do
+  case (chunksOf 2 . unpack $ drop 1 $ att ^. color) of
     ["ff", "ff", "ff"] -> pure ()
     ["ff", "ff", _]    -> setSGR [SetColor Foreground Vivid Yellow]
     ["ff", _, "ff"]    -> setSGR [SetColor Foreground Vivid Magenta]

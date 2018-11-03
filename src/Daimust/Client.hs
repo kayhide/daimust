@@ -41,8 +41,7 @@ import           Daimust.Crawler         (Crawler, Dom, Response, URI, action,
                                           links, printForm, putState,
                                           runCrawler, selected, src)
 import qualified Daimust.Crawler         as Crawler
-import           Daimust.Data.Attendance (Attendance (..), AttendancePeriod,
-                                          parseHours)
+import           Daimust.Data.Attendance
 import           Daimust.Display
 
 
@@ -151,10 +150,10 @@ listAttendances = do
     pure . catMaybes $ parseItem period <$> table ^.. selected "tr"
 
 updateAttendance :: Attendance -> ClientMonad ()
-updateAttendance att@Attendance { date } = do
+updateAttendance att = do
   page <- authenticate
   Client { .. } <- get
-  sayInfo $ "Updating: Attendane #" <> date
+  sayInfo $ "Updating: Attendane #" <> att ^. date
   client' <- liftIO $ runCrawler $ do
     putState state
     res <- postUpdate att page
@@ -163,10 +162,10 @@ updateAttendance att@Attendance { date } = do
   put client'
 
 deleteAttendance :: Attendance -> ClientMonad ()
-deleteAttendance att@Attendance { date } = do
+deleteAttendance att = do
   page <- authenticate
   Client { .. } <- get
-  sayInfo $ "Deleting: Attendance #" <> date
+  sayInfo $ "Deleting: Attendance #" <> att ^. date
   client' <- liftIO $ runCrawler $ do
     putState state
     res <- postDelete att page
@@ -236,11 +235,11 @@ gotoEntrance res = do
 
 
 postUpdate :: Attendance -> Response -> Crawler Response
-postUpdate Attendance {..} res = do
+postUpdate att res = do
   let form02 = findForm "form02" res
   let form' = form02
-              & fields . at "pn10s01" ?~ date <> ","
-              & fields . at "pn10s02" ?~ date <> ","
+              & fields . at "pn10s01" ?~ att ^. date <> ","
+              & fields . at "pn10s02" ?~ att ^. date <> ","
               & fields . at "pn10s03" .~ (form02 ^. fields . at "TEMP_pn00011")
               & fields . at "pn10s04" .~ (form02 ^. fields . at "TEMP_pn10009")
               & fields . at "pn10s05" ?~ ","
@@ -250,9 +249,9 @@ postUpdate Attendance {..} res = do
               & fields . at "pn10s07t" ?~ ","
               & fields . at "pn10s08" ?~ ","
               & fields . at "pn10s08t" ?~ ","
-              & fields . at "pn10s09" ?~ date <> enter <> ","
-              & fields . at "pn10s10" ?~ leave <> ","
-              & fields . at "pn10s11" ?~ noteValue <> ","
+              & fields . at "pn10s09" ?~ att ^. date <> att ^. enter <> ","
+              & fields . at "pn10s10" ?~ att ^. leave <> ","
+              & fields . at "pn10s11" ?~ att ^. noteValue <> ","
               & fields . at "pn10s14" ?~ ","
               & fields . at "pn10s15" ?~ ","
               & fields . at "pn10s28" ?~ ","
@@ -266,15 +265,15 @@ postUpdate Attendance {..} res = do
   Crawler.submit form'
 
 postDelete :: Attendance -> Response -> Crawler Response
-postDelete Attendance {..} = predelete' >=> delete'
+postDelete att = predelete' >=> delete'
   where
     predelete' res' = do
       let form01 = findForm "form01" res'
       let form02 = findForm "form02" res'
       let form' = form01
-                  & fields . at "pn00010" ?~ date
+                  & fields . at "pn00010" ?~ att ^. date
                   & fields . at "pn00011" .~ (form02 ^. fields . at "TEMP_pn00011")
-                  & fields . at "pn00012" ?~ date <> enter <> "00"
+                  & fields . at "pn00012" ?~ att ^. date <> att ^. enter <> "00"
                   & fields . at "pn10009" .~ (form02 ^. fields . at "TEMP_pn10009")
                   & fields . at "pn10102" ?~ "mishonin"
       Crawler.submit form'
@@ -283,9 +282,9 @@ postDelete Attendance {..} = predelete' >=> delete'
       let form01 = findForm "form01" res'
       let form02 = findForm "form02" res'
       let form' = form01
-                  & fields . at "pn00010" ?~ date
+                  & fields . at "pn00010" ?~ att^. date
                   & fields . at "pn00011" .~ (form02 ^. fields . at "TEMP_pn00011")
-                  & fields . at "pn00012" ?~ date <> enter <> "00"
+                  & fields . at "pn00012" ?~ att^. date <> att ^. enter <> "00"
                   & fields . at "pn10009" .~ (form02 ^. fields . at "TEMP_pn10009")
                   & fields . at "pn10102" ?~ "rec_del"
       Crawler.submit form'
@@ -321,21 +320,21 @@ rowTexts tr = do
   pure $ bool "" (unwords $ words text') ((length . filter (not . null . concat . words) $ lines text') == 1)
 
 parseItem :: AttendancePeriod -> Dom -> Maybe Attendance
-parseItem period tr = headMay . catMaybes $ do
+parseItem period' tr = headMay . catMaybes $ do
   comment <- tr ^.. selected "" . comments
   pure $ do
     let cells = rowTexts tr
-    day <- cells ^? ix 0
-    dow <- cells ^? ix 1
+    day' <- cells ^? ix 0
+    dow' <- cells ^? ix 1
     hours <- cells ^? ix 10
-    let (enter, leave) = fromMaybe ("", "") $ parseHours hours
-    let noteValue = fromMaybe "" $ (tr ^.. selected "td") ^. ix 12 . selected "input" . attr "value"
-    noteLabel <- cells ^? ix 12
-    color <- headMay . catMaybes $ tr ^.. selected "td" . attr "bgcolor"
+    let (enter', leave') = fromMaybe ("", "") $ parseHours hours
+    let noteValue' = fromMaybe "" $ (tr ^.. selected "td") ^. ix 12 . selected "input" . attr "value"
+    noteLabel' <- cells ^? ix 12
+    color' <- headMay . catMaybes $ tr ^.. selected "td" . attr "bgcolor"
     flip (parseMaybe @()) comment $ do
       between (space *> string "ymd[") (string "]" *> space) $ do
         y <- some digitChar <* char '-'
         m <- some digitChar <* char '-'
         d <- some digitChar <* char '-'
         void $ some (notChar ']')
-        pure $ Attendance { date = pack y <> pack m <> pack d, .. }
+        pure $ Attendance period' (pack y <> pack m <> pack d) day' dow' enter' leave' noteValue' noteLabel' color'
