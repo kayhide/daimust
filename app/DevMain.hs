@@ -16,6 +16,9 @@ import qualified Main
 
 run :: IO ()
 run = do
+  -- putStrLn "$ daimust put 26 1000 2100"
+  -- withArgs ["put", "26", "1000", "2100"] Main.main
+  -- putStrLn ""
   putStrLn "$ daimust list"
   withArgs ["list"] Main.main
   putStrLn ""

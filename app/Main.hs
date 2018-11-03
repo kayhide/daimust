@@ -6,15 +6,18 @@ import           ClassyPrelude
 import           Options.Applicative
 
 import qualified Daimust.Cli.Command.List as List
+import qualified Daimust.Cli.Command.Put  as Put
 
 
 data CommandArgs where
   List :: List.Args -> CommandArgs
+  Put :: Put.Args -> CommandArgs
 
 argsP :: Parser CommandArgs
 argsP =
   subparser
-  (command "list" (info (List <$> List.argsP <**> helper) (progDesc "List")))
+  $ command "list" (info (List <$> List.argsP <**> helper) (progDesc "List"))
+  <> command "put" (info (Put <$> Put.argsP <**> helper) (progDesc "Put"))
 
 
 argsWithHelpP :: ParserInfo CommandArgs
@@ -25,3 +28,4 @@ main = do
   args <- customExecParser (prefs showHelpOnEmpty) argsWithHelpP
   case args of
     List args' -> List.run args'
+    Put args'  -> Put.run args'

@@ -11,15 +11,14 @@ import           Data.List.Split         (chunksOf)
 import           Options.Applicative
 import           System.Console.ANSI     (Color (..), ColorIntensity (..),
                                           ConsoleLayer (..), SGR (..), setSGR)
-import           Text.Megaparsec         (Parsec, count, parseMaybe)
-import           Text.Megaparsec.Char    (digitChar)
+import           Text.Megaparsec         (parseMaybe)
 
 import           Daimust.Cli.Utils       (readSettings)
 import           Daimust.Client          (headerTexts, listAttendances,
                                           moveToPeriod, newClient, runClient,
                                           setVerbose)
-import           Daimust.Data.Attendance (Attendance (..), AttendancePeriod,
-                                          formatAttendance)
+import           Daimust.Data.Attendance (Attendance (..), formatAttendance,
+                                          periodP)
 
 
 data Args =
@@ -52,13 +51,6 @@ run Args {..} = do
     liftIO $ do
       traverse_ putStrLn headers
       traverse_ printAttendance attendances
-
-periodP :: Parsec () Text AttendancePeriod
-periodP = do
-  year <- pack <$> count 4 digitChar
-  month <- pack <$> count 2 digitChar
-  pure (year, month)
-
 
 printAttendance :: Attendance -> IO ()
 printAttendance att@Attendance {..} = do

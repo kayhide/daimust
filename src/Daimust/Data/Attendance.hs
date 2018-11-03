@@ -1,8 +1,11 @@
 module Daimust.Data.Attendance
   ( Attendance (..)
+  , AttendanceEnter
+  , AttendanceLeave
   , AttendancePeriod
   , formatAttendance
   , parseHours
+  , periodP
   )
 where
 
@@ -61,3 +64,11 @@ parseHours hours = flip (parseMaybe @()) hours $ do
   hour2 <- some digitChar <* char ':'
   min2 <- some digitChar
   pure (pack (hour1 <> min1), pack (hour2 <> min2))
+
+-- | Text parser of @AttendancePeriod@.
+
+periodP :: Parsec () Text AttendancePeriod
+periodP = do
+  year <- pack <$> count 4 digitChar
+  month <- pack <$> count 2 digitChar
+  pure (year, month)
