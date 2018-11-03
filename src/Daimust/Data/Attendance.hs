@@ -31,6 +31,7 @@ data Attendance =
   , leave     :: AttendanceLeave
   , noteValue :: Text
   , noteLabel :: Text
+  , color     :: Text
   }
   deriving (Eq, Show)
 

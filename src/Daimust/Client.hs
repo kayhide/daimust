@@ -331,6 +331,7 @@ parseItem period tr = headMay . catMaybes $ do
     let (enter, leave) = fromMaybe ("", "") $ parseHours hours
     let noteValue = fromMaybe "" $ (tr ^.. selected "td") ^. ix 12 . selected "input" . attr "value"
     noteLabel <- cells ^? ix 12
+    color <- headMay . catMaybes $ tr ^.. selected "td" . attr "bgcolor"
     flip (parseMaybe @()) comment $ do
       between (space *> string "ymd[") (string "]" *> space) $ do
         y <- some digitChar <* char '-'
