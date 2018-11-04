@@ -14,16 +14,24 @@ module Daimust.Data.Attendance
   , noteLabel
   , color
   , formatAttendance
+  , printAttendance
   , parseHours
   , periodP
   )
 where
 
-import           ClassyPrelude        hiding (many, some)
+import           ClassyPrelude                             hiding (many, some)
 
-import           Control.Lens         (makeLenses)
-import           Formatting           (bprint, center, later, left, sformat,
-                                       stext, (%), (%.))
+import           Control.Lens                              (makeLenses, (^.))
+import           Data.List.Split                           (chunksOf)
+import           Data.Text.Prettyprint.Doc                 (pretty, (<+>))
+import qualified Data.Text.Prettyprint.Doc                 as Pretty
+import           Data.Text.Prettyprint.Doc.Render.Terminal (Color (..))
+import qualified Data.Text.Prettyprint.Doc.Render.Terminal as Pretty
+import           Formatting                                (bprint, center,
+                                                            later, left,
+                                                            sformat, stext, (%),
+                                                            (%.))
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 
@@ -67,6 +75,28 @@ formatAttendance (Attendance _ _ day' dow' enter' leave' noteValue' noteLabel' _
   ) day' dow' enter' leave' noteLabel' noteValue'
 
 
+-- | Pretty prints @Attendance@.
+
+printAttendance :: Attendance -> IO ()
+printAttendance (Attendance _ _ day' dow' enter' leave' noteValue' noteLabel' color') = do
+  let doc = pretty dayCol <+> pretty timeCol <+> Pretty.softline' <+> pretty noteCol
+  let annotate' =
+        case (chunksOf 2 . unpack $ drop 1 $ color') of
+          ["ff", "ff", "ff"] -> id
+          ["ff", "ff", _]    -> Pretty.annotate $ Pretty.color Yellow
+          ["ff", _, "ff"]    -> Pretty.annotate $ Pretty.color Magenta
+          [_, "ff", "ff"]    -> Pretty.annotate $ Pretty.color Cyan
+          ["ff", _, _]       -> Pretty.annotate $ Pretty.color Red
+          [_, "ff", _]       -> Pretty.annotate $ Pretty.color Green
+          [_, _, "ff"]       -> Pretty.annotate $ Pretty.color Blue
+          _                  -> id
+  Pretty.putDoc $ Pretty.indent 2 (annotate' doc) <+> Pretty.line
+  where
+    dayCol = sformat ((left 3 ' ' %. stext) % (left 3 ' ' %. stext))  day' dow'
+    timeCol = sformat ((center 13 ' ' %. (stext % " - " % stext))) enter' leave'
+    noteCol = bool (sformat (stext % " (" % stext % ")") noteLabel' noteValue') "" $ null noteValue'
+
+
 -- | Parse hours cell @Text@ into enter and leave values.
 
 parseHours :: Text -> Maybe (AttendanceEnter, AttendanceLeave)
@@ -77,6 +107,7 @@ parseHours hours = flip (parseMaybe @()) hours $ do
   hour2 <- some digitChar <* char ':'
   min2 <- some digitChar
   pure (pack (hour1 <> min1), pack (hour2 <> min2))
+
 
 -- | Text parser of @AttendancePeriod@.
 

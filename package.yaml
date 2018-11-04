@@ -10,7 +10,6 @@ extra-source-files:
 - README.md
 
 dependencies:
-- ansi-terminal
 - async
 - base
 - bytestring
@@ -28,6 +27,8 @@ dependencies:
 - network-uri
 - operational
 - optparse-applicative
+- prettyprinter
+- prettyprinter-ansi-terminal
 - primitive
 - split
 - stm

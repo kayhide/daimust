@@ -9,7 +9,7 @@ import           System.Environment      (withArgs)
 import           Daimust
 import           Daimust.Cli.Utils       (readSettings)
 import           Daimust.Client
-import           Daimust.Data.Attendance (formatAttendance)
+import           Daimust.Data.Attendance
 
 import qualified Main
 
@@ -42,7 +42,7 @@ tryClient = do
     attendances <- listAttendances
     liftIO $ do
       traverse_ putStrLn headers
-      traverse_ (putStrLn . formatAttendance) attendances
+      traverse_ printAttendance attendances
 
     -- let atts = take 2 $ dropWhile (\ Attendance {..} -> date /= "20181005") attendances
     -- let update' att = updateAttendance $ att { enter = "1000", leave = "2200", noteValue = "00" }
