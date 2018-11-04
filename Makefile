@@ -1,4 +1,4 @@
 dev:
-	ghcid --command "stack ghci --main-is DevMain" --test "DevMain.run"
+	ghcid --command "stack ghci" --test "DevMain.run"
 
 .PHONY: dev

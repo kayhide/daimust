@@ -3,30 +3,27 @@ where
 
 import           ClassyPrelude
 
-import           Formatting
 import           System.Environment      (withArgs)
 
-import           Daimust
+import qualified Daimust.Cli             as Cli
 import           Daimust.Cli.Utils       (readSettings)
 import           Daimust.Client
 import           Daimust.Data.Attendance
-
-import qualified Main
 
 
 run :: IO ()
 run = do
   -- putStrLn "$ daimust put 26 1000 2100"
-  -- withArgs ["put", "26", "1000", "2100"] Main.main
+  -- withArgs ["put", "26", "1000", "2100"] Cli.run
   -- putStrLn ""
   -- putStrLn "$ daimust delete 26"
-  -- withArgs ["delete", "26"] Main.main
+  -- withArgs ["delete", "26"] Cli.run
   -- putStrLn ""
   putStrLn "$ daimust list"
-  withArgs ["list"] Main.main
+  withArgs ["list"] Cli.run
   putStrLn ""
   putStrLn "$ daimust list --period 201810"
-  withArgs ["list", "--period", "201810"] Main.main
+  withArgs ["list", "--period", "201810"] Cli.run
   putStrLn ""
 
   -- putStrLn "try client"
