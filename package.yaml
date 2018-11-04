@@ -22,11 +22,14 @@ dependencies:
 - filepath
 - formatting
 - lens
+- lens-datetime
 - megaparsec
 - mtl
 - network-uri
 - operational
 - optparse-applicative
+- path
+- path-io
 - prettyprinter
 - prettyprinter-ansi-terminal
 - primitive

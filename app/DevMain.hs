@@ -9,22 +9,24 @@ import qualified Daimust.Cli             as Cli
 import           Daimust.Cli.Utils       (readSettings)
 import           Daimust.Client
 import           Daimust.Data.Attendance
+import qualified Daimust.Histfile as Histfile
 
 
 run :: IO ()
 run = do
+  Histfile.try
   -- putStrLn "$ daimust put 26 1000 2100"
   -- withArgs ["put", "26", "1000", "2100"] Cli.run
   -- putStrLn ""
   -- putStrLn "$ daimust delete 26"
   -- withArgs ["delete", "26"] Cli.run
   -- putStrLn ""
-  putStrLn "$ daimust list"
-  withArgs ["list"] Cli.run
-  putStrLn ""
-  putStrLn "$ daimust list --period 201810"
-  withArgs ["list", "--period", "201810"] Cli.run
-  putStrLn ""
+  -- putStrLn "$ daimust list"
+  -- withArgs ["list"] Cli.run
+  -- putStrLn ""
+  -- putStrLn "$ daimust list --period 201810"
+  -- withArgs ["list", "--period", "201810"] Cli.run
+  -- putStrLn ""
 
   -- putStrLn "try client"
   -- tryClient
