@@ -19,6 +19,9 @@ run = do
   -- putStrLn "$ daimust put 26 1000 2100"
   -- withArgs ["put", "26", "1000", "2100"] Main.main
   -- putStrLn ""
+  -- putStrLn "$ daimust delete 26"
+  -- withArgs ["delete", "26"] Main.main
+  -- putStrLn ""
   putStrLn "$ daimust list"
   withArgs ["list"] Main.main
   putStrLn ""
