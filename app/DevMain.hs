@@ -14,7 +14,7 @@ import qualified Daimust.Histfile as Histfile
 
 run :: IO ()
 run = do
-  Histfile.try
+  traverse_ print =<< Histfile.readAll
   -- putStrLn "$ daimust put 26 1000 2100"
   -- withArgs ["put", "26", "1000", "2100"] Cli.run
   -- putStrLn ""

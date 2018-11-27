@@ -1,5 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Daimust.Histfile
+  ( HistRecord(..)
+  , readAll
+  )
 where
 
 
@@ -19,27 +22,32 @@ import           Text.Megaparsec            (Parsec, parseMaybe, some, takeRest)
 import           Text.Megaparsec.Char       (char, digitChar, space)
 import           Text.Megaparsec.Char.Lexer (decimal)
 
+data HistRecord = HistRecord
+  { day     :: Day
+  , startAt :: TimeOfDay
+  , endAt   :: TimeOfDay
+  }
+  deriving (Eq, Show)
 
-try :: IO ()
-try = do
+readAll :: IO [HistRecord]
+readAll = do
   zone <- getCurrentTimeZone
   contents <- readFile . toFilePath =<< histfile
   let lines' = lines $ decodeUtf8 contents
   let hists = catMaybes $ parse' <$> reverse lines'
   let timestamps = hists ^.. traverse . _1 . utcInTZ zone :: [LocalTime]
-
-  traverse_ print . catMaybes $ rangeOfTime <$> groupBy ((==) `on` (^. date)) timestamps
+  pure $ catMaybes $ toHistRecord <$> groupBy ((==) `on` (^. date)) timestamps
 
   where
     parse' :: Text -> Maybe (UTCTime, Text)
     parse' = parseMaybe histP
 
-    rangeOfTime :: [LocalTime] -> Maybe (Day, (TimeOfDay, TimeOfDay))
-    rangeOfTime [] = Nothing
-    rangeOfTime times@(dt : _) =
+    toHistRecord :: [LocalTime] -> Maybe HistRecord
+    toHistRecord [] = Nothing
+    toHistRecord times@(dt : _) =
       case times ^.. traverse . time . to (Min &&& Max) of
         [] -> Nothing
-        (x : xs) -> pure $ (dt ^. date,) $ (getMin *** getMax) $ foldl' (<>) x xs
+        (x : xs) -> pure $ uncurry (HistRecord (dt ^. date)) $ (getMin *** getMax) $ foldl' (<>) x xs
 
 
 
