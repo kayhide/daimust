@@ -2,6 +2,7 @@
 module Daimust.Histfile
   ( HistRecord(..)
   , readAll
+  , printHistRecord
   )
 where
 
@@ -24,6 +25,8 @@ import           Text.Megaparsec            (Parsec, parseMaybe, some, takeRest)
 import           Text.Megaparsec.Char       (char, digitChar, space)
 import           Text.Megaparsec.Char.Lexer (decimal)
 
+-- | Data types
+
 data HistRecord = HistRecord
   { day     :: Day
   , startAt :: TimeOfDay
@@ -31,6 +34,7 @@ data HistRecord = HistRecord
   }
   deriving (Eq, Show)
 
+-- | Functions
 
 readAll :: IO [HistRecord]
 readAll = do
@@ -41,7 +45,11 @@ readAll = do
   let timestamps = hists ^.. traverse . _1 . utcInTZ zone
   pure . fmap toHistRecord $ Map.toList $ foldr pushTime Map.empty timestamps
 
+printHistRecord :: HistRecord -> IO ()
+printHistRecord HistRecord {..} =
+  putStrLn $ tshow day <> "  " <> tshow startAt <> " - " <> tshow endAt
 
+-- | Internal helpers
 
 type DayMinMaxMap = Map Day (Min TimeOfDay, Max TimeOfDay)
 

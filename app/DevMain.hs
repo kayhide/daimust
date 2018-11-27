@@ -9,12 +9,12 @@ import qualified Daimust.Cli             as Cli
 import           Daimust.Cli.Utils       (readSettings)
 import           Daimust.Client
 import           Daimust.Data.Attendance
-import qualified Daimust.Histfile as Histfile
 
 
 run :: IO ()
 run = do
-  traverse_ print =<< Histfile.readAll
+  withArgs ["hist"] Cli.run
+
   -- putStrLn "$ daimust put 26 1000 2100"
   -- withArgs ["put", "26", "1000", "2100"] Cli.run
   -- putStrLn ""
@@ -61,4 +61,3 @@ tryClient = do
     -- liftIO . traverse_ (putStrLn . formatAttendance) =<< listAttendances
 
     pure ()
-
