@@ -13,7 +13,14 @@ import           Daimust.Data.Attendance
 
 run :: IO ()
 run = do
-  withArgs ["hist"] Cli.run
+  -- withArgs ["focus", "current"] Cli.run
+  -- replicateM_ 14 $ withArgs ["focus", "prev"] Cli.run
+  -- withArgs ["focus", "current"] Cli.run
+  -- replicateM_ 14 $ withArgs ["focus", "next"] Cli.run
+
+  withArgs ["focus", "current"] Cli.run
+  replicateM_ 8 $ withArgs ["focus", "prev"] Cli.run
+  withArgs ["list"] Cli.run
 
   -- putStrLn "$ daimust put 26 1000 2100"
   -- withArgs ["put", "26", "1000", "2100"] Cli.run
@@ -39,7 +46,7 @@ tryClient = do
   flip evalClient client $ do
     setVerbose True
     void authenticate
-    moveToPeriod ("2018", "11")
+    moveToPeriod $ Period 2018 11
     headers <- headerTexts
     attendances <- listAttendances
     liftIO $ do

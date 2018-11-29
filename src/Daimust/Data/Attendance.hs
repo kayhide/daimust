@@ -3,7 +3,9 @@ module Daimust.Data.Attendance
   ( Attendance (..)
   , AttendanceEnter
   , AttendanceLeave
-  , AttendancePeriod
+, Period (..)
+  , year
+  , month
   , period
   , date
   , day
@@ -13,6 +15,7 @@ module Daimust.Data.Attendance
   , noteValue
   , noteLabel
   , color
+  , printPeriod
   , formatAttendance
   , printAttendance
   , parseHours
@@ -29,7 +32,8 @@ import qualified Data.Text.Prettyprint.Doc                 as Pretty
 import           Data.Text.Prettyprint.Doc.Render.Terminal (Color (..))
 import qualified Data.Text.Prettyprint.Doc.Render.Terminal as Pretty
 import           Formatting                                (bprint, center,
-                                                            later, left,
+                                                            fprint, int, later,
+                                                            left, right,
                                                             sformat, stext, (%),
                                                             (%.))
 import           Text.Megaparsec
@@ -41,11 +45,18 @@ import           Text.Megaparsec.Char
 type AttendanceEnter = Text
 type AttendanceLeave = Text
 
-type AttendancePeriod = (Text, Text)
+data Period =
+  Period
+  { _year  :: Int
+  , _month :: Int
+  }
+  deriving (Eq, Show, Read)
+
+makeLenses ''Period
 
 data Attendance =
   Attendance
-  { _period    :: AttendancePeriod
+  { _period    :: Period
   , _date      :: Text
   , _day       :: Text
   , _dow       :: Text
@@ -61,6 +72,13 @@ makeLenses ''Attendance
 
 
 -- * Helper functions
+
+-- | Print @Period@.
+
+printPeriod :: Period -> IO ()
+printPeriod (Period year' month') = do
+  fprint ((left 4 '0' %. int) % "-" % (left 2 '0' %. int)) year' month'
+  putStrLn ""
 
 -- | Format attendence data into @Text@.
 
@@ -109,10 +127,12 @@ parseHours hours = flip (parseMaybe @()) hours $ do
   pure (pack (hour1 <> min1), pack (hour2 <> min2))
 
 
--- | Text parser of @AttendancePeriod@.
+-- | Text parser of @Period@.
 
-periodP :: Parsec () Text AttendancePeriod
+periodP :: Parsec () Text Period
 periodP = do
-  year <- pack <$> count 4 digitChar
-  month <- pack <$> count 2 digitChar
-  pure (year, month)
+  year <- readMay <$> count 4 digitChar
+  month <- readMay <$> count 2 digitChar
+  case (year, month) of
+    (Just year', Just month') -> pure $ Period year' month'
+    _                         -> fail "internal error: failed to convert digitChar to Int"

@@ -11,6 +11,7 @@ module Daimust.Client
   , isVerbose
   , authenticate
   , headerTexts
+  , getCurrentPeriod
   , moveToPeriod
   , listAttendances
   , updateAttendance
@@ -128,7 +129,11 @@ headerTexts = do
     let DisplayTableConfig { headerRows } = attendancesTable
     pure $ (table ^.. selected "tr") ^.. traversed . indices (`elem` headerRows) . to (unwords . rowTexts)
 
-moveToPeriod :: AttendancePeriod -> ClientMonad ()
+getCurrentPeriod :: ClientMonad (Maybe Period)
+getCurrentPeriod = do
+  getPeriod <$> authenticate
+
+moveToPeriod :: Period -> ClientMonad ()
 moveToPeriod period = do
   page <- authenticate
   let current = getPeriod page
@@ -290,12 +295,12 @@ postDelete att = predelete' >=> delete'
       Crawler.submit form'
 
 
-gotoPeriod :: AttendancePeriod -> Response -> Crawler Response
-gotoPeriod (year, month) res = do
+gotoPeriod :: Period -> Response -> Crawler Response
+gotoPeriod period res = do
   let form01 = findForm "form01" res
   let form' = form01
-              & fields . at "pn10100" ?~ year
-              & fields . at "pn10101" ?~ month
+              & fields . at "pn10100" ?~ period ^. year . to tshow
+              & fields . at "pn10101" ?~ period ^. month . to tshow
               & fields . at "pn10102" ?~ "search"
   Crawler.submit form'
 
@@ -306,12 +311,12 @@ findForm :: Text -> Response -> Crawler.Form
 findForm name res =
   res ^?! responseBody . html . selected "form" . attributed (ix "name" . only name) . forms
 
-getPeriod :: Response -> Maybe AttendancePeriod
+getPeriod :: Response -> Maybe Period
 getPeriod res = do
   let form01 = findForm "form01" res
-  year <- form01 ^. fields . at "pn10100"
-  month <- form01 ^. fields . at "pn10101"
-  pure $ (year, month)
+  year <- readMay =<< form01 ^. fields . at "pn10100"
+  month <- readMay =<< form01 ^. fields . at "pn10101"
+  pure $ Period year month
 
 rowTexts :: Dom -> [Text]
 rowTexts tr = do
@@ -319,7 +324,7 @@ rowTexts tr = do
   let text' = td ^. folding universe . text
   pure $ bool "" (unwords $ words text') ((length . filter (not . null . concat . words) $ lines text') == 1)
 
-parseItem :: AttendancePeriod -> Dom -> Maybe Attendance
+parseItem :: Period -> Dom -> Maybe Attendance
 parseItem period' tr = headMay . catMaybes $ do
   comment <- tr ^.. selected "" . comments
   pure $ do
