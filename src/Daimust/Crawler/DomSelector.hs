@@ -3,6 +3,7 @@ where
 
 import           ClassyPrelude        hiding (many, some)
 
+import           Data.Void            (Void)
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 
@@ -15,7 +16,7 @@ newtype DomSelector = DomSelector [DomFactor]
 instance IsString DomSelector where
   fromString = parseSelector . pack
 
-type Parser = Parsec () Text
+type Parser = Parsec Void Text
 
 parseSelector :: Text -> DomSelector
 parseSelector = DomSelector . fromMaybe [] . parseMaybe selector'
@@ -23,5 +24,5 @@ parseSelector = DomSelector . fromMaybe [] . parseMaybe selector'
     selector' =  many (name' <|> id' <|> class') :: Parser [DomFactor]
     chunk' = some $ noneOf (['#', '.'] :: [Char])
     name' = DomName . pack <$> chunk'
-    id' = DomId . pack <$> (char '#' >> chunk')
-    class' = DomClass . pack <$> (char '.' >> chunk')
+    id' = DomId . pack <$> (char '#' *> chunk')
+    class' = DomClass . pack <$> (char '.' *> chunk')

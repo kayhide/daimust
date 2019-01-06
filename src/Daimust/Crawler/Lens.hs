@@ -3,9 +3,10 @@ where
 
 import           ClassyPrelude
 
-import           Control.Lens                (Fold, filtered, folded, folding, Prism', prism,
-                                              ix, only, to, universe, view, _Just,
-                                              (^.), (^?), (^..))
+import           Control.Lens                (Fold, Prism', filtered, folded,
+                                              folding, ix, only, prism, to,
+                                              universe, view, (^.), (^..), (^?),
+                                              _Just)
 import qualified Data.Map                    as Map
 import           Network.URI
 import           Text.Xml.Lens               (attr, attributed, html, name,

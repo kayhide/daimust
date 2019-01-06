@@ -13,32 +13,26 @@ import           Daimust.Data.Attendance
 
 run :: IO ()
 run = do
-  -- withArgs ["focus", "current"] Cli.run
-  -- replicateM_ 14 $ withArgs ["focus", "prev"] Cli.run
-  -- withArgs ["focus", "current"] Cli.run
-  -- replicateM_ 14 $ withArgs ["focus", "next"] Cli.run
+  runCommand ["focus", "current"]
+  -- replicateM_ 14 $ runCommand ["focus", "prev"]
+  -- runCommand ["focus"]
+  -- runCommand ["focus", "current"]
+  -- replicateM_ 14 $ runCommand ["focus", "next"]
+  -- runCommand ["focus"]
 
-  withArgs ["focus", "current"] Cli.run
-  replicateM_ 8 $ withArgs ["focus", "prev"] Cli.run
-  withArgs ["list"] Cli.run
-
-  -- putStrLn "$ daimust put 26 1000 2100"
-  -- withArgs ["put", "26", "1000", "2100"] Cli.run
-  -- putStrLn ""
-  -- putStrLn "$ daimust delete 26"
-  -- withArgs ["delete", "26"] Cli.run
-  -- putStrLn ""
-  -- putStrLn "$ daimust list"
-  -- withArgs ["list"] Cli.run
-  -- putStrLn ""
-  -- putStrLn "$ daimust list --period 201810"
-  -- withArgs ["list", "--period", "201810"] Cli.run
-  -- putStrLn ""
+  -- runCommand ["put", "26", "1000", "2100"]
+  -- runCommand ["delete", "26"]
+  runCommand ["list"]
 
   -- putStrLn "try client"
   -- tryClient
 
   pure ()
+
+runCommand :: [Text] -> IO ()
+runCommand args = do
+  putStrLn $ "$ daimust " <> unwords args
+  withArgs (unpack <$> args) Cli.run
 
 tryClient :: IO ()
 tryClient = do

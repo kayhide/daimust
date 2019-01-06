@@ -25,17 +25,17 @@ where
 
 import           ClassyPrelude                             hiding (many, some)
 
-import           Control.Lens                              (makeLenses, (^.))
+import           Control.Lens                              (makeLenses)
 import           Data.List.Split                           (chunksOf)
 import           Data.Text.Prettyprint.Doc                 (pretty, (<+>))
 import qualified Data.Text.Prettyprint.Doc                 as Pretty
 import           Data.Text.Prettyprint.Doc.Render.Terminal (Color (..))
 import qualified Data.Text.Prettyprint.Doc.Render.Terminal as Pretty
+import           Data.Void                                 (Void)
 import           Formatting                                (bprint, center,
                                                             fprint, int, later,
-                                                            left, right,
-                                                            sformat, stext, (%),
-                                                            (%.))
+                                                            left, sformat,
+                                                            stext, (%), (%.))
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 
@@ -110,7 +110,7 @@ printAttendance (Attendance _ _ day' dow' enter' leave' noteValue' noteLabel' co
           _                  -> id
   Pretty.putDoc $ Pretty.indent 2 (annotate' doc) <+> Pretty.line
   where
-    dayCol = sformat ((left 3 ' ' %. stext) % (left 3 ' ' %. stext))  day' dow'
+    dayCol = sformat ((left 3 ' ' %. stext) % (left 3 ' ' %. stext)) day' dow'
     timeCol = sformat ((center 13 ' ' %. (stext % " - " % stext))) enter' leave'
     noteCol = bool (sformat (stext % " (" % stext % ")") noteLabel' noteValue') "" $ null noteValue'
 
@@ -129,10 +129,12 @@ parseHours hours = flip (parseMaybe @()) hours $ do
 
 -- | Text parser of @Period@.
 
-periodP :: Parsec () Text Period
+type Parser = Parsec Void Text
+
+periodP :: Parser Period
 periodP = do
-  year <- readMay <$> count 4 digitChar
-  month <- readMay <$> count 2 digitChar
-  case (year, month) of
-    (Just year', Just month') -> pure $ Period year' month'
-    _                         -> fail "internal error: failed to convert digitChar to Int"
+  year' <- readMay <$> count 4 digitChar
+  month' <- readMay <$> count 2 digitChar
+  case (Period <$> year' <*> month') of
+    Just period' -> pure period'
+    _            -> fail "internal error: failed to convert digitChar to Int"

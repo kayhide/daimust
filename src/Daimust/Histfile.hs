@@ -17,6 +17,7 @@ import           Data.Time.Clock.POSIX      (posixSecondsToUTCTime)
 import           Data.Time.Lens
 import           Data.Time.LocalTime        (LocalTime, TimeOfDay,
                                              getCurrentTimeZone)
+import           Data.Void                  (Void)
 import           Path                       (Abs, File, Path, mkRelFile,
                                              parseAbsFile, toFilePath, (</>))
 import           Path.IO                    (getHomeDir)
@@ -73,7 +74,9 @@ histfile = maybe dotHistfile parseAbsFile =<< lookupEnv "HISTFILE"
 parseLineMaybe :: Text -> Maybe (UTCTime, Text)
 parseLineMaybe = parseMaybe lineP
 
-lineP :: Parsec () Text (UTCTime, Text)
+type Parser = Parsec Void Text
+
+lineP :: Parser (UTCTime, Text)
 lineP = do
   void $ char ':' *> space
   i :: Integer <- decimal

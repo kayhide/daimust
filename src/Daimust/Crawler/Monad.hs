@@ -28,8 +28,8 @@ import           Network.Wreq.Session      (Session)
 import qualified Network.Wreq.Session      as Session
 import           Text.Xml.Lens             as Xml
 
-import           Daimust.Crawler.Type
 import           Daimust.Crawler.Lens
+import           Daimust.Crawler.Type
 
 
 data CrawlerI a where

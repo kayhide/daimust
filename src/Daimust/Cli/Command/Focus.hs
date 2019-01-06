@@ -8,13 +8,10 @@ where
 import           ClassyPrelude
 
 import           Options.Applicative
-import           Text.Megaparsec         (parseMaybe)
 
-import           Daimust.Cli.Utils       (focus, getDaimustDir, lookupFocus,
-                                          readSettings, unfocus)
+import           Daimust.Cli.Utils       (focus, lookupFocus, readSettings)
 import           Daimust.Client          (evalClient, getCurrentPeriod,
-                                          headerTexts, listAttendances,
-                                          moveToPeriod, newClient, setVerbose)
+                                          newClient, setVerbose)
 import           Daimust.Data.Attendance
 
 
@@ -30,14 +27,6 @@ data Focusing
   | Prev
   | Next
   deriving (Eq, Show)
-
-focusingPrevP = maybeReader $ \case
-  "prev" -> Just Prev
-  _ -> Nothing
-
-focusingNextP = maybeReader $ \case
-  "next" -> Just Next
-  _ -> Nothing
 
 focusingP :: Parser (Maybe Focusing)
 focusingP =

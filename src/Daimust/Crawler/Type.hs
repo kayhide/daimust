@@ -27,7 +27,7 @@ where
 
 import           ClassyPrelude
 
-import           Control.Lens
+import           Control.Lens         (makeFields)
 import qualified Data.ByteString.Lazy as BL
 import           Network.URI          (URI)
 import qualified Network.Wreq         as Wreq

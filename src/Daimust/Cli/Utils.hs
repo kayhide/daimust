@@ -15,8 +15,7 @@ import           Network.URI             (parseURI)
 import           Path                    (Abs, Dir, File, Path, mkRelDir,
                                           mkRelFile, parseAbsDir, toFilePath,
                                           (</>))
-import           Path.IO                 (createDir, doesDirExist,
-                                          doesFileExist, ensureDir, getHomeDir,
+import           Path.IO                 (doesFileExist, ensureDir, getHomeDir,
                                           removeFile)
 import           System.Environment      (getEnv, lookupEnv)
 
@@ -68,19 +67,16 @@ withFocusFile action = do
 
 lookupFocus :: IO (Maybe Period)
 lookupFocus =
-  withFocusFile $ \file -> do
-  exists <- doesFileExist file
-  if exists
-    then readMay <$> TIO.readFile (toFilePath file)
-    else pure Nothing
+  withFocusFile $ \file ->
+  doesFileExist file
+  >>= bool (pure Nothing) (readMay <$> TIO.readFile (toFilePath file))
 
 
 -- | Set current focus
 
 focus :: Period -> IO ()
-focus period = do
-  ensureDaimustDir
-  file <- getFocusFile
+focus period =
+  withFocusFile $ \file ->
   TIO.writeFile (toFilePath file) $ tshow period
 
 unfocus :: IO ()

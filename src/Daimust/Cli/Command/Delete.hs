@@ -7,21 +7,20 @@ where
 
 import           ClassyPrelude
 
-import           Control.Lens            (filtered, (&), (.~), (^.), (^..))
+import           Control.Lens            (filtered, (^.), (^..))
 import           Options.Applicative
 
-import           Daimust.Cli.Utils       (readSettings, lookupFocus)
-import           Daimust.Cli.Utils       (readSettings)
-import           Daimust.Client          (ClientMonad, listAttendances,
+import           Daimust.Cli.Utils       (lookupFocus, readSettings)
+import           Daimust.Client          (deleteAttendance, listAttendances,
                                           moveToPeriod, newClient, runClient,
-                                          setVerbose, deleteAttendance)
+                                          setVerbose)
 import           Daimust.Data.Attendance
 
 
 data Args =
   Args
-  { _day       :: Text
-  , _verbose   :: Bool
+  { _day     :: Text
+  , _verbose :: Bool
   }
   deriving (Show)
 

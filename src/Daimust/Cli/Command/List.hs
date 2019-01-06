@@ -9,7 +9,7 @@ import           ClassyPrelude
 
 import           Options.Applicative
 
-import           Daimust.Cli.Utils       (readSettings, lookupFocus)
+import           Daimust.Cli.Utils       (lookupFocus, readSettings)
 import           Daimust.Client          (headerTexts, listAttendances,
                                           moveToPeriod, newClient, runClient,
                                           setVerbose)

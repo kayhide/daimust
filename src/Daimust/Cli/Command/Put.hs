@@ -10,7 +10,7 @@ import           ClassyPrelude
 import           Control.Lens            (filtered, (&), (.~), (^.), (^..))
 import           Options.Applicative
 
-import           Daimust.Cli.Utils       (readSettings, lookupFocus)
+import           Daimust.Cli.Utils       (lookupFocus, readSettings)
 import           Daimust.Client          (ClientMonad, listAttendances,
                                           moveToPeriod, newClient, runClient,
                                           setVerbose, updateAttendance)
@@ -20,9 +20,9 @@ import           Daimust.Data.Attendance
 data Args =
   Args
   { _day       :: Text
-  , _enter     :: Text
-  , _leave     :: Text
-  , _noteValue :: Maybe Text
+  , _enter     :: AttendanceEnter
+  , _leave     :: AttendanceLeave
+  , _noteValue :: Text
   , _verbose   :: Bool
   }
   deriving (Show)
@@ -34,11 +34,9 @@ argsP =
   <$> argument str (metavar "DAY" <> help "Day to put")
   <*> argument str (metavar "ENTER" <> help "Enter time HHMM")
   <*> argument str (metavar "LEAVE" <> help "Leave time HHMM")
-  <*> optional
-  ( strOption
-    ( long "note" <> metavar "NOTE" <> help
-      "`00` for working day, `20` for holiday (default: 00)"
-    ))
+  <*> strOption ( long "note" <> metavar "NOTE" <> value "00" <> showDefault <> help
+                  "`00` for working day, `20` for holiday"
+                )
   <*> switch (long "verbose" <> short 'v' <> help "Print more")
 
 run :: Args -> IO ()
@@ -52,10 +50,10 @@ run Args {..} = do
     let att = headMay $ attendances ^.. traverse . filtered ((== _day) . (^. day))
     maybe (pure ()) (update' _enter _leave _noteValue) att
 
-update' :: AttendanceEnter -> AttendanceLeave -> Maybe Text -> Attendance -> ClientMonad ()
+update' :: AttendanceEnter -> AttendanceLeave -> Text -> Attendance -> ClientMonad ()
 update' enter' leave' noteValue' att =
   updateAttendance $ att
   & enter .~ enter'
   & leave .~ leave'
-  & noteValue .~ fromMaybe "00" noteValue'
+  & noteValue .~ noteValue'
 
