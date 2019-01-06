@@ -9,10 +9,10 @@ import           ClassyPrelude
 
 import           Options.Applicative
 
-import           Daimust.Cli.Utils       (focus, lookupFocus, readSettings)
-import           Daimust.Client          (evalClient, getCurrentPeriod,
-                                          newClient, setVerbose)
-import           Daimust.Data.Attendance
+import           Daimust.Cli.Utils   (focus, lookupFocus, readSettings)
+import           Daimust.Client      (evalClient, getCurrentPeriod, newClient,
+                                      setVerbose)
+import           Daimust.Data.Period (Period (..), formatPeriod)
 
 
 data Args =
@@ -59,7 +59,7 @@ run args@Args {..} = do
     _ -> pure ()
 
   lookupFocus
-    >>= maybe (putStrLn "no focus") printPeriod
+    >>= putStrLn . maybe "no focus" formatPeriod
   where
     failGetCurrentPeriod :: IO ()
     failGetCurrentPeriod = fail "Failed to get current period"

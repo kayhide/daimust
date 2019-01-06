@@ -1,6 +1,7 @@
 module Daimust.Client
   ( Settings (..)
   , Attendance (..)
+  , Period (..)
   , Client
   , newClient
   , ClientMonad
@@ -43,6 +44,7 @@ import           Daimust.Crawler         (Crawler, Dom, Response, URI, action,
                                           runCrawler, selected, src)
 import qualified Daimust.Crawler         as Crawler
 import           Daimust.Data.Attendance
+import           Daimust.Data.Period
 import           Daimust.Display
 
 

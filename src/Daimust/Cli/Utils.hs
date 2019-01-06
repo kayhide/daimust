@@ -8,19 +8,18 @@ module Daimust.Cli.Utils
   )
 where
 
-import           ClassyPrelude           hiding ((</>))
+import           ClassyPrelude       hiding ((</>))
 
-import qualified Data.Text.IO            as TIO
-import           Network.URI             (parseURI)
-import           Path                    (Abs, Dir, File, Path, mkRelDir,
-                                          mkRelFile, parseAbsDir, toFilePath,
-                                          (</>))
-import           Path.IO                 (doesFileExist, ensureDir, getHomeDir,
-                                          removeFile)
-import           System.Environment      (getEnv, lookupEnv)
+import           Network.URI         (parseURI)
+import           Path                (Abs, Dir, File, Path, mkRelDir, mkRelFile,
+                                      parseAbsDir, toFilePath, (</>))
+import           Path.IO             (doesFileExist, ensureDir, getHomeDir,
+                                      removeFile)
+import           System.Environment  (getEnv, lookupEnv)
 
-import           Daimust.Client          (Settings (..))
-import           Daimust.Data.Attendance (Period (..))
+import           Daimust.Client      (Settings (..))
+import           Daimust.Data.Period (Period (..), formatPeriod,
+                                      parsePeriodMaybe)
 
 -- * Cli util functions
 
@@ -69,7 +68,7 @@ lookupFocus :: IO (Maybe Period)
 lookupFocus =
   withFocusFile $ \file ->
   doesFileExist file
-  >>= bool (pure Nothing) (readMay <$> TIO.readFile (toFilePath file))
+  >>= bool (pure Nothing) (parsePeriodMaybe <$> readFileUtf8 (toFilePath file))
 
 
 -- | Set current focus
@@ -77,11 +76,10 @@ lookupFocus =
 focus :: Period -> IO ()
 focus period =
   withFocusFile $ \file ->
-  TIO.writeFile (toFilePath file) $ tshow period
+  writeFileUtf8 (toFilePath file) $ formatPeriod period
 
 unfocus :: IO ()
-unfocus = do
-  ensureDaimustDir
-  file <- getFocusFile
-  exists <- doesFileExist file
-  when exists $ removeFile file
+unfocus =
+  withFocusFile $ \file ->
+  doesFileExist file
+  >>= bool (pure ()) (removeFile file)
