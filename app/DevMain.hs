@@ -13,7 +13,7 @@ import           Daimust.Data.Attendance
 
 run :: IO ()
 run = do
-  runCommand ["focus", "current"]
+  -- runCommand ["focus", "current"]
   -- replicateM_ 14 $ runCommand ["focus", "prev"]
   -- runCommand ["focus"]
   -- runCommand ["focus", "current"]
@@ -22,7 +22,10 @@ run = do
 
   -- runCommand ["put", "26", "1000", "2100"]
   -- runCommand ["delete", "26"]
-  runCommand ["list"]
+  -- runCommand ["list"]
+
+  runCommand ["focus", "current", "--verbose"]
+  runCommand ["list", "--verbose"]
 
   -- putStrLn "try client"
   -- tryClient

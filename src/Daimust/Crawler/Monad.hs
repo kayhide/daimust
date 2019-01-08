@@ -1,11 +1,14 @@
 module Daimust.Crawler.Monad
   ( Crawler
   , State
+  , dumpState
+  , restoreState
   , runCrawler
   , getState
   , putState
   , currentUrl
   , get
+  , refresh
   , submit
   , click
   , printElement
@@ -22,21 +25,22 @@ import           Control.Monad.Operational (Program, ProgramView,
                                             ProgramViewT (..))
 import qualified Control.Monad.Operational as Op
 import qualified Data.Map                  as Map
+import           Network.HTTP.Client       (getUri)
 import           Network.URI
-import           Network.Wreq              (FormParam (..))
-import           Network.Wreq.Session      (Session)
+import           Network.Wreq              (FormParam (..), defaults)
+import           Network.Wreq.Lens         (hrFinalRequest, hrFinalResponse)
 import qualified Network.Wreq.Session      as Session
 import           Text.Xml.Lens             as Xml
 
 import           Daimust.Crawler.Lens
+import           Daimust.Crawler.State     (State (..), dumpState, restoreState)
 import           Daimust.Crawler.Type
 
 
 data CrawlerI a where
   CurrentUrl :: CrawlerI URI
   Get :: URI -> CrawlerI Response
-  Submit :: Form -> CrawlerI Response
-  Click :: Link -> CrawlerI Response
+  Post :: URI -> [FormParam] -> CrawlerI Response
 
   GetState :: CrawlerI State
   PutState :: State -> CrawlerI ()
@@ -48,13 +52,6 @@ data CrawlerI a where
 
 type Crawler a = Program CrawlerI a
 
-data State =
-  State
-  { session :: Session
-  , url     :: URI
-  }
-  deriving (Show)
-
 runCrawler :: Crawler a -> IO a
 runCrawler m = do
   session <- Session.newSession
@@ -65,6 +62,18 @@ runCrawler m = do
 runCrawler' :: State -> Crawler a -> IO a
 runCrawler' state@State {..} = eval . Op.view
   where
+    request' :: String -> URI -> [FormParam] -> IO (Response, URI)
+    request' method url' body = do
+      hr <- case method of
+        "GET" ->
+          Session.customHistoriedMethodWith method defaults session (show url')
+        "POST" ->
+          Session.customHistoriedPayloadMethodWith method defaults session (show url') body
+        _ ->
+          error $ "Invalid http method: " <> method
+      -- print $ hr ^. hrFinalRequest
+      pure (hr ^. hrFinalResponse, getUri $ hr ^. hrFinalRequest)
+
     eval :: ProgramView CrawlerI a -> IO a
 
     eval (Return x) = pure x
@@ -73,23 +82,13 @@ runCrawler' state@State {..} = eval . Op.view
       pure url
       >>= runCrawler' state . k
 
-    eval (Get url' :>>= k) =
-      Session.get session (show url')
-      >>= runCrawler' State { url = url', .. } . k
+    eval (Get url' :>>= k) = do
+      (res, url'') <- request' "GET" url' []
+      runCrawler' State { url = url'', .. } . k $ res
 
-    eval (Submit form :>>= k) =
-      Session.post session (show url') xs'
-      >>= runCrawler' State { url = url', .. } . k
-      where
-        url' = form ^. action
-        xs' =
-          uncurry (:=) . first encodeUtf8 <$> form ^. fields . to Map.toList
-
-    eval (Click link' :>>= k) =
-      Session.get session (show url')
-      >>= runCrawler' State { url = url', .. } . k
-      where
-        url' = link' ^. href
+    eval (Post url' body' :>>= k) = do
+      (res, url'') <- request' "POST" url' body'
+      runCrawler' State { url = url'', .. } . k $ res
 
     eval (GetState :>>= k) =
       pure state
@@ -117,17 +116,20 @@ currentUrl = Op.singleton CurrentUrl
 get :: URI -> Crawler Response
 get = Op.singleton . Get
 
+refresh :: Crawler Response
+refresh = get =<< currentUrl
+
 submit :: Form -> Crawler Response
 submit form = do
-  url <- currentUrl
-  Op.singleton $ Submit $
-    form & action %~ flip relativeTo url
+  url <- relativeTo (form ^. action) <$> currentUrl
+  Op.singleton $ Post url body
+  where
+    body = uncurry (:=) . first encodeUtf8 <$> form ^. fields . to Map.toList
 
 click :: Link -> Crawler Response
 click link' = do
-  url <- currentUrl
-  Op.singleton $ Click $
-    link' & href %~ flip relativeTo url
+  url <- relativeTo (link' ^. href) <$> currentUrl
+  Op.singleton $ Get url
 
 printElement :: Xml.Element -> Crawler ()
 printElement = Op.singleton . PrintElement
@@ -165,12 +167,12 @@ printForm' form = do
   putStrLn ""
 
 printLink' :: Link -> IO ()
-printLink' link = do
+printLink' link' = do
   putStrLn $ mconcat
-    [ link ^. dom . name
-    , link ^. domId . to ("#" <>)
-    , link ^. domClass . to ("." <>)
+    [ link' ^. dom . name
+    , link' ^. domId . to ("#" <>)
+    , link' ^. domClass . to ("." <>)
     ]
-  print $ link ^. href
-  putStrLn $ link ^. innerText
-  -- print' $ link ^. dom
+  print $ link' ^. href
+  putStrLn $ link' ^. innerText
+  -- print' $ link' ^. dom

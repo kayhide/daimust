@@ -2,6 +2,7 @@
 module Daimust.Cli.Utils
   ( readSettings
   , getDaimustDir
+  , getStateCacheFile
   , lookupFocus
   , focus
   , unfocus
@@ -47,6 +48,15 @@ getDaimustDir = maybe defaultDir parseAbsDir =<< lookupEnv "DAIMUST_DIR"
 ensureDaimustDir :: IO ()
 ensureDaimustDir = ensureDir =<< getDaimustDir
 
+
+-- * Cache
+
+-- | State Cache file
+
+getStateCacheFile :: IO (Path Abs File)
+getStateCacheFile = do
+  dir <- getDaimustDir
+  pure $ dir </> $(mkRelFile "state.bin")
 
 -- * Focus management functions
 

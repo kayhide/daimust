@@ -9,10 +9,11 @@ import           ClassyPrelude
 
 import           Options.Applicative
 
-import           Daimust.Cli.Utils       (lookupFocus, readSettings)
+import           Daimust.Cli.Utils       (getStateCacheFile, lookupFocus,
+                                          readSettings)
 import           Daimust.Client          (headerTexts, listAttendances,
                                           moveToPeriod, newClient, runClient,
-                                          setVerbose)
+                                          setCacheFile, setVerbose)
 import           Daimust.Data.Attendance
 
 
@@ -32,9 +33,11 @@ run :: Args -> IO ()
 run Args {..} = do
   client <- newClient =<< readSettings
   period' <- lookupFocus
+  cacheFile' <- getStateCacheFile
   void $ flip runClient client $ do
     setVerbose _verbose
-    maybe (pure ()) moveToPeriod period'
+    setCacheFile cacheFile'
+    traverse_ moveToPeriod period'
     headers <- headerTexts
     attendances <- listAttendances
     liftIO $ do

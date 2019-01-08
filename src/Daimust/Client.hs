@@ -10,6 +10,8 @@ module Daimust.Client
   , execClient
   , setVerbose
   , isVerbose
+  , setCacheFile
+  , getCacheFile
   , authenticate
   , headerTexts
   , getCurrentPeriod
@@ -31,6 +33,8 @@ import           Control.Monad.State     (StateT, evalStateT, execStateT, get,
 import           Data.Default            (def)
 import           Network.URI             (parseURIReference)
 import           Network.Wreq.Lens       (responseBody)
+import           Network.Wreq.Session    (Session (..), getSessionCookieJar)
+import           Path                    (Abs, File, Path, toFilePath)
 import           System.IO.Unsafe        (unsafePerformIO)
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
@@ -40,7 +44,7 @@ import           Debug.Trace             as Debug
 
 import           Daimust.Crawler         (Crawler, Dom, Response, URI, action,
                                           dom, fields, forms, frames, getState,
-                                          links, printForm, putState,
+                                          links, printForm, putState, refresh,
                                           runCrawler, selected, src)
 import qualified Daimust.Crawler         as Crawler
 import           Daimust.Data.Attendance
@@ -74,16 +78,18 @@ attendancesTable =
 
 data Client =
   Client
-  { settings :: Settings
-  , basePage :: Maybe Response
-  , state    :: Crawler.State
-  , verbose  :: Bool
+  { settings  :: Settings
+  , basePage  :: Maybe Response
+  , state     :: Crawler.State
+  , verbose   :: Bool
+  , cacheFile :: Maybe (Path Abs File)
   }
+  deriving (Show)
 
 newClient :: Settings -> IO Client
 newClient settings = do
   state <- runCrawler getState
-  pure Client { basePage = Nothing, verbose = False, ..}
+  pure Client { basePage = Nothing, verbose = False, cacheFile = Nothing, ..}
 
 
 -- * Client monad
@@ -109,19 +115,64 @@ setVerbose b =
 isVerbose :: ClientMonad Bool
 isVerbose = gets verbose
 
+setCacheFile :: Path Abs File -> ClientMonad ()
+setCacheFile file =
+  modify $ \client -> client { cacheFile = Just file }
+
+getCacheFile :: ClientMonad (Maybe (Path Abs File))
+getCacheFile = gets cacheFile
+
+cacheState :: ClientMonad ()
+cacheState = do
+  Client {..} <- get
+  traverse_ (go state) cacheFile
+  where
+    go :: Crawler.State -> Path Abs File -> ClientMonad ()
+    go state file = do
+      sayInfo "Caching State"
+      writeFile (toFilePath file) =<< Crawler.dumpState state
+
+uncacheState :: ClientMonad ()
+uncacheState = do
+  Client {..} <- get
+  traverse_ (go state) cacheFile
+  where
+    go :: Crawler.State -> Path Abs File -> ClientMonad ()
+    go state file = do
+      sayInfo "Uncaching State"
+      readFile (toFilePath file)
+        >>= Crawler.restoreState
+        >>= \case
+        Nothing -> pure ()
+        Just state' -> do
+          res <- liftIO $ runCrawler $ do
+            putState state'
+            refresh
+          Client {..} <- get
+          put Client { basePage = Just res, state = state', .. }
+
 authenticate :: ClientMonad Response
 authenticate = do
-  Client {..} <- get
-  case basePage of
-    Nothing -> do
+  gets basePage
+  >>= maybe tryRestore (pure . Just)
+  >>= maybe go pure
+  where
+    tryRestore :: ClientMonad (Maybe Response)
+    tryRestore = do
+      uncacheState
+      gets basePage
+
+    go :: ClientMonad Response
+    go = do
+      Client {..} <- get
       sayInfo "Authenticating"
-      (client', res) <- liftIO $ runCrawler $ do
+      (res, state') <- liftIO $ runCrawler $ do
         res <- gotoEntrance =<< login settings
         state' <- getState
-        pure (Client { basePage = Just res, state = state', .. }, res)
-      put client'
+        pure (res, state')
+      put Client { basePage = Just res, state = state', .. }
+      cacheState
       pure res
-    Just res -> pure res
 
 headerTexts :: ClientMonad [Text]
 headerTexts = do

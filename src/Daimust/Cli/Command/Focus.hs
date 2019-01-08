@@ -9,9 +9,10 @@ import           ClassyPrelude
 
 import           Options.Applicative
 
-import           Daimust.Cli.Utils   (focus, lookupFocus, readSettings)
+import           Daimust.Cli.Utils   (focus, getStateCacheFile, lookupFocus,
+                                      readSettings)
 import           Daimust.Client      (evalClient, getCurrentPeriod, newClient,
-                                      setVerbose)
+                                      setCacheFile, setVerbose)
 import           Daimust.Data.Period (Period (..), formatPeriod)
 
 
@@ -68,8 +69,10 @@ run args@Args {..} = do
 getCurrent :: Args -> IO (Maybe Period)
 getCurrent Args {..} = do
   client <- newClient =<< readSettings
+  cacheFile' <- getStateCacheFile
   flip evalClient client $ do
     setVerbose _verbose
+    setCacheFile cacheFile'
     getCurrentPeriod
 
 decrement :: Period -> Period
