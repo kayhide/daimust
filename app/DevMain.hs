@@ -3,16 +3,20 @@ where
 
 import           ClassyPrelude
 
+import           Path                    (toFilePath)
 import           System.Environment      (withArgs)
 
 import qualified Daimust.Cli             as Cli
-import           Daimust.Cli.Utils       (readSettings)
+import           Daimust.Cli.Utils       (getStateCacheFile, readSettings)
 import           Daimust.Client
+import qualified Daimust.Crawler         as Crawler
 import           Daimust.Data.Attendance
 
 
 run :: IO ()
 run = do
+  -- invalidateCache               -- Invalidate cached state immediately.
+
   -- runCommand ["focus", "current"]
   -- replicateM_ 14 $ runCommand ["focus", "prev"]
   -- runCommand ["focus"]
@@ -36,6 +40,13 @@ runCommand :: [Text] -> IO ()
 runCommand args = do
   putStrLn $ "$ daimust " <> unwords args
   withArgs (unpack <$> args) Cli.run
+
+invalidateCache :: IO ()
+invalidateCache = do
+  file <- getStateCacheFile
+  Crawler.runCrawler Crawler.getState
+    >>= Crawler.dumpState
+    >>= writeFile (toFilePath file)
 
 tryClient :: IO ()
 tryClient = do

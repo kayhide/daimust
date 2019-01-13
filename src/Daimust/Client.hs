@@ -134,11 +134,10 @@ cacheState = do
 
 uncacheState :: ClientMonad ()
 uncacheState = do
-  Client {..} <- get
-  traverse_ (go state) cacheFile
+  traverse_ go =<< gets cacheFile
   where
-    go :: Crawler.State -> Path Abs File -> ClientMonad ()
-    go state file = do
+    go :: Path Abs File -> ClientMonad ()
+    go file = do
       sayInfo "Uncaching State"
       readFile (toFilePath file)
         >>= Crawler.restoreState
@@ -148,8 +147,9 @@ uncacheState = do
           res <- liftIO $ runCrawler $ do
             putState state'
             refresh
-          Client {..} <- get
-          put Client { basePage = Just res, state = state', .. }
+          when (isEntrance res) $ do
+            Client {..} <- get
+            put Client { basePage = Just res, state = state', .. }
 
 authenticate :: ClientMonad Response
 authenticate = do
@@ -359,6 +359,9 @@ gotoPeriod period res = do
 
 
 -- * Helper functions
+
+isEntrance :: Response -> Bool
+isEntrance res = isJust $ getPeriod res
 
 findForm :: Text -> Response -> Crawler.Form
 findForm name res =
