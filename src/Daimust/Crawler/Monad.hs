@@ -52,29 +52,32 @@ data CrawlerI a where
 
 type Crawler a = Program CrawlerI a
 
-runCrawler :: Crawler a -> IO a
+
+runCrawler :: MonadIO m => Crawler a -> m a
 runCrawler m = do
-  session <- Session.newSession
+  session <- liftIO Session.newSession
   runCrawler' State {..} m
   where
     url = URI "" Nothing "" "" ""
 
-runCrawler' :: State -> Crawler a -> IO a
+runCrawler' :: forall m a. MonadIO m => State -> Crawler a -> m a
 runCrawler' state@State {..} = eval . Op.view
   where
-    request' :: String -> URI -> [FormParam] -> IO (Response, URI)
+    request' :: String -> URI -> [FormParam] -> m (Response, URI)
     request' method url' body = do
       hr <- case method of
         "GET" ->
+          liftIO $
           Session.customHistoriedMethodWith method defaults session (show url')
         "POST" ->
+          liftIO $
           Session.customHistoriedPayloadMethodWith method defaults session (show url') body
         _ ->
           error $ "Invalid http method: " <> method
       -- print $ hr ^. hrFinalRequest
       pure (hr ^. hrFinalResponse, getUri $ hr ^. hrFinalRequest)
 
-    eval :: ProgramView CrawlerI a -> IO a
+    eval :: ProgramView CrawlerI a -> m a
 
     eval (Return x) = pure x
 
@@ -151,10 +154,10 @@ putState = Op.singleton . PutState
 
 -- * For debug
 
-printElement' :: Xml.Element -> IO ()
+printElement' :: MonadIO m => Xml.Element -> m ()
 printElement' x = putStr . toStrict $ x ^. Xml.renderWith (rsPretty .~ True)
 
-printForm' :: Form -> IO ()
+printForm' :: MonadIO m => Form -> m ()
 printForm' form = do
   putStrLn $ mconcat
     [ form ^. dom . name
@@ -166,7 +169,7 @@ printForm' form = do
   -- print' $ form ^. dom
   putStrLn ""
 
-printLink' :: Link -> IO ()
+printLink' :: MonadIO m => Link -> m ()
 printLink' link' = do
   putStrLn $ mconcat
     [ link' ^. dom . name

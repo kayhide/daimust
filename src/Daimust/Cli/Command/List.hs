@@ -40,6 +40,6 @@ run Args {..} = do
     traverse_ moveToPeriod period'
     headers <- headerTexts
     attendances <- listAttendances
-    liftIO $ do
-      traverse_ putStrLn headers
-      traverse_ printAttendance attendances
+
+    traverse_ putStrLn headers
+    traverse_ printAttendance attendances

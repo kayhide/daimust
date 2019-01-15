@@ -77,7 +77,7 @@ formatAttendance (Attendance _ _ day' dow' enter' leave' noteValue' noteLabel' _
 
 -- | Pretty prints @Attendance@.
 
-printAttendance :: Attendance -> IO ()
+printAttendance :: MonadIO m => Attendance -> m ()
 printAttendance (Attendance _ _ day' dow' enter' leave' noteValue' noteLabel' color') = do
   let doc = pretty dayCol <+> pretty timeCol <+> Pretty.softline' <+> pretty noteCol
   let annotate' =
@@ -90,7 +90,7 @@ printAttendance (Attendance _ _ day' dow' enter' leave' noteValue' noteLabel' co
           [_, "ff", _]       -> Pretty.annotate $ Pretty.color Green
           [_, _, "ff"]       -> Pretty.annotate $ Pretty.color Blue
           _                  -> id
-  Pretty.putDoc $ Pretty.indent 2 (annotate' doc) <+> Pretty.line
+  liftIO $ Pretty.putDoc $ Pretty.indent 2 (annotate' doc) <+> Pretty.line
   where
     dayCol = sformat ((left 3 ' ' %. stext) % (left 3 ' ' %. stext)) day' dow'
     timeCol = sformat ((center 13 ' ' %. (stext % " - " % stext))) enter' leave'

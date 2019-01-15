@@ -8,13 +8,10 @@ where
 import           ClassyPrelude
 
 import qualified Data.Binary             as Binary
-import qualified Data.Map                as Map
-import           Network.HTTP.Client     (CookieJar)
 import           Network.HTTP.Client.TLS (tlsManagerSettings)
 import           Network.URI
 import           Network.Wreq.Session    (Session, getSessionCookieJar,
                                           newSessionControl)
-import qualified Network.Wreq.Session    as Session
 
 
 data State =

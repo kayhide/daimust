@@ -140,7 +140,7 @@ uncacheState = void $ runMaybeT $ do
   guard =<< doesFileExist file
   lift $ sayInfo "Uncaching State"
   state' <- MaybeT $ Crawler.restoreState =<< readFile (toFilePath file)
-  res :: Response <- liftIO $ runCrawler $ do
+  res :: Response <- runCrawler $ do
     putState state'
     refresh
   guard $ isEntrance res
@@ -163,7 +163,7 @@ authenticate =
     go = do
       Client {..} <- get
       sayInfo "Authenticating"
-      (res, state') <- liftIO $ runCrawler $ do
+      (res, state') <- runCrawler $ do
         res <- gotoEntrance =<< login settings
         state' <- getState
         pure (res, state')
@@ -189,7 +189,7 @@ moveToPeriod period = do
   let current = getPeriod page
   when (current /= Just period) $ do
     Client {..} <- get
-    client' <- liftIO $ runCrawler $ do
+    client' <- runCrawler $ do
       putState state
       res <- gotoPeriod period page
       state' <- getState
@@ -209,7 +209,7 @@ updateAttendance att = do
   page <- authenticate
   Client { .. } <- get
   sayInfo $ "Updating: Attendane #" <> att ^. date
-  client' <- liftIO $ runCrawler $ do
+  client' <- runCrawler $ do
     putState state
     res <- postUpdate att page
     state' <- getState
@@ -221,7 +221,7 @@ deleteAttendance att = do
   page <- authenticate
   Client { .. } <- get
   sayInfo $ "Deleting: Attendance #" <> att ^. date
-  client' <- liftIO $ runCrawler $ do
+  client' <- runCrawler $ do
     putState state
     res <- postDelete att page
     state' <- getState
@@ -283,8 +283,8 @@ gotoEntrance res = do
   res4 <- do
     let Just link' = lastMay $ res3 ^.. responseBody . html . links
     Crawler.click link'
-  -- traverse_ printLink $ res4 ^.. responseBody . html . links
-  -- traverse_ printForm $ res4 ^.. responseBody . html . forms
+  -- traverse_ Crawler.printLink $ res4 ^.. responseBody . html . links
+  -- traverse_ Crawler.printForm $ res4 ^.. responseBody . html . forms
 
   pure res4
 
