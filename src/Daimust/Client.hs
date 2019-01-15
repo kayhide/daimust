@@ -22,32 +22,34 @@ module Daimust.Client
   )
 where
 
-import           ClassyPrelude           hiding (many, some)
+import           ClassyPrelude             hiding (many, some)
 
-import           Control.Lens            (at, folded, folding, indices, ix,
-                                          only, to, traversed, universe, (&),
-                                          (...), (.~), (?~), (^.), (^..), (^?),
-                                          (^?!), _Just, _last)
-import           Control.Monad.State     (StateT, evalStateT, execStateT, get,
-                                          gets, modify, put, runStateT)
-import           Data.Default            (def)
-import           Network.URI             (parseURIReference)
-import           Network.Wreq.Lens       (responseBody)
-import           Network.Wreq.Session    (Session (..), getSessionCookieJar)
-import           Path                    (Abs, File, Path, toFilePath)
-import           Path.IO                 (doesFileExist)
-import           System.IO.Unsafe        (unsafePerformIO)
+import           Control.Lens              (at, folded, folding, indices, ix,
+                                            only, to, traversed, universe, (&),
+                                            (...), (.~), (?~), (^.), (^..),
+                                            (^?), (^?!), _Just, _last)
+import           Control.Monad.State       (StateT, evalStateT, execStateT, get,
+                                            gets, modify, put, runStateT)
+import           Control.Monad.Trans.Maybe (MaybeT(..))
+import           Data.Default              (def)
+import           Network.URI               (parseURIReference)
+import           Network.Wreq.Lens         (responseBody)
+import           Network.Wreq.Session      (Session (..), getSessionCookieJar)
+import           Path                      (Abs, File, Path, toFilePath)
+import           Path.IO                   (doesFileExist)
+import           System.IO.Unsafe          (unsafePerformIO)
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import           Text.Xml.Lens
 
-import           Debug.Trace             as Debug
+import           Debug.Trace               as Debug
 
-import           Daimust.Crawler         (Crawler, Dom, Response, URI, action,
-                                          dom, fields, forms, frames, getState,
-                                          links, printForm, putState, refresh,
-                                          runCrawler, selected, src)
-import qualified Daimust.Crawler         as Crawler
+import           Daimust.Crawler           (Crawler, Dom, Response, URI, action,
+                                            dom, fields, forms, frames,
+                                            getState, links, printForm,
+                                            putState, refresh, runCrawler,
+                                            selected, src)
+import qualified Daimust.Crawler           as Crawler
 import           Daimust.Data.Attendance
 import           Daimust.Data.Period
 import           Daimust.Display
@@ -124,39 +126,30 @@ getCacheFile :: ClientMonad (Maybe (Path Abs File))
 getCacheFile = gets cacheFile
 
 cacheState :: ClientMonad ()
-cacheState = do
-  Client {..} <- get
-  traverse_ (go state) cacheFile
-  where
-    go :: Crawler.State -> Path Abs File -> ClientMonad ()
-    go state file = do
-      sayInfo "Caching State"
-      writeFile (toFilePath file) =<< Crawler.dumpState state
+cacheState = void $ runMaybeT $ do
+  file <- MaybeT $ gets cacheFile
+  lift $ do
+    sayInfo "Caching State"
+    gets state
+      >>= Crawler.dumpState
+      >>= writeFile (toFilePath file)
 
 uncacheState :: ClientMonad ()
-uncacheState =
-  traverse_ go =<< gets cacheFile
-  where
-    go :: Path Abs File -> ClientMonad ()
-    go file = do
-      doesFileExist file >>= \case
-        False -> pure ()
-        True -> do
-          sayInfo "Uncaching State"
-          readFile (toFilePath file)
-            >>= Crawler.restoreState
-            >>= \case
-            Nothing -> pure ()
-            Just state' -> do
-              res <- liftIO $ runCrawler $ do
-                putState state'
-                refresh
-              when (isEntrance res) $ do
-                Client {..} <- get
-                put Client { basePage = Just res, state = state', .. }
+uncacheState = void $ runMaybeT $ do
+  file <- MaybeT $ gets cacheFile
+  guard =<< doesFileExist file
+  lift $ sayInfo "Uncaching State"
+  state' <- MaybeT $ Crawler.restoreState =<< readFile (toFilePath file)
+  res :: Response <- liftIO $ runCrawler $ do
+    putState state'
+    refresh
+  guard $ isEntrance res
+  lift $ do
+    Client {..} <- get
+    put Client { basePage = Just res, state = state', .. }
 
 authenticate :: ClientMonad Response
-authenticate = do
+authenticate =
   gets basePage
   >>= maybe tryRestore (pure . Just)
   >>= maybe go pure
@@ -242,7 +235,7 @@ sayInfo :: Text -> ClientMonad ()
 sayInfo msg = do
   Client { verbose } <- get
   when verbose $ do
-    liftIO $ putStrLn msg
+    putStrLn msg
 
 
 -- * Crawler actions
