@@ -35,6 +35,7 @@ import           Network.URI             (parseURIReference)
 import           Network.Wreq.Lens       (responseBody)
 import           Network.Wreq.Session    (Session (..), getSessionCookieJar)
 import           Path                    (Abs, File, Path, toFilePath)
+import           Path.IO                 (doesFileExist)
 import           System.IO.Unsafe        (unsafePerformIO)
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
@@ -133,23 +134,26 @@ cacheState = do
       writeFile (toFilePath file) =<< Crawler.dumpState state
 
 uncacheState :: ClientMonad ()
-uncacheState = do
+uncacheState =
   traverse_ go =<< gets cacheFile
   where
     go :: Path Abs File -> ClientMonad ()
     go file = do
-      sayInfo "Uncaching State"
-      readFile (toFilePath file)
-        >>= Crawler.restoreState
-        >>= \case
-        Nothing -> pure ()
-        Just state' -> do
-          res <- liftIO $ runCrawler $ do
-            putState state'
-            refresh
-          when (isEntrance res) $ do
-            Client {..} <- get
-            put Client { basePage = Just res, state = state', .. }
+      doesFileExist file >>= \case
+        False -> pure ()
+        True -> do
+          sayInfo "Uncaching State"
+          readFile (toFilePath file)
+            >>= Crawler.restoreState
+            >>= \case
+            Nothing -> pure ()
+            Just state' -> do
+              res <- liftIO $ runCrawler $ do
+                putState state'
+                refresh
+              when (isEntrance res) $ do
+                Client {..} <- get
+                put Client { basePage = Just res, state = state', .. }
 
 authenticate :: ClientMonad Response
 authenticate = do
