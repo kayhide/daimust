@@ -24,20 +24,17 @@ where
 
 import           ClassyPrelude             hiding (many, some)
 
-import           Control.Lens              (at, folded, folding, indices, ix,
-                                            only, to, traversed, universe, (&),
-                                            (...), (.~), (?~), (^.), (^..),
-                                            (^?), (^?!), _Just, _last)
+import           Control.Lens              (at, folding, indices, ix, only, to,
+                                            traversed, universe, (&), (.~),
+                                            (?~), (^.), (^..), (^?), (^?!))
 import           Control.Monad.State       (StateT, evalStateT, execStateT, get,
                                             gets, modify, put, runStateT)
-import           Control.Monad.Trans.Maybe (MaybeT(..))
+import           Control.Monad.Trans.Maybe (MaybeT (..))
 import           Data.Default              (def)
-import           Network.URI               (URI(..), parseURIReference)
+import           Network.URI               (URI (..), parseURIReference)
 import           Network.Wreq.Lens         (responseBody)
-import           Network.Wreq.Session      (Session (..), getSessionCookieJar)
 import           Path                      (Abs, File, Path, toFilePath)
 import           Path.IO                   (doesFileExist)
-import           System.IO.Unsafe          (unsafePerformIO)
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import           Text.Xml.Lens
@@ -192,25 +189,25 @@ getCurrentPeriod = do
   pure $ getPeriod res
 
 moveToPeriod :: Period -> ClientMonad ()
-moveToPeriod period = do
+moveToPeriod period' = do
   page <- authenticate
   let current = getPeriod page
-  when (current /= Just period) $ do
+  when (current /= Just period') $ do
     Client {..} <- get
-    client' <- runCrawler $ do
+    (res, state') <- runCrawler $ do
       putState state
-      res <- gotoPeriod period page
+      res <- gotoPeriod period' page
       state' <- getState
-      pure Client { basePage = Just res, state = state', .. }
-    put client'
+      pure (res, state')
+    put Client { basePage = Just res, state = state', .. }
 
 listAttendances :: ClientMonad [Attendance]
 listAttendances = do
   page <- authenticate
   pure $ fromMaybe [] $ do
-    period <- getPeriod page
+    period' <- getPeriod page
     table <- lastMay $ page ^.. responseBody . html . selected "table"
-    pure . catMaybes $ parseItem period <$> table ^.. selected "tr"
+    pure . catMaybes $ parseItem period' <$> table ^.. selected "tr"
 
 updateAttendance :: Attendance -> ClientMonad ()
 updateAttendance att = do
@@ -345,20 +342,20 @@ postDelete att = predelete' >=> delete'
       let form01 = findForm "form01" res'
       let form02 = findForm "form02" res'
       let form' = form01
-                  & fields . at "pn00010" ?~ att^. date
+                  & fields . at "pn00010" ?~ att ^. date
                   & fields . at "pn00011" .~ (form02 ^. fields . at "TEMP_pn00011")
-                  & fields . at "pn00012" ?~ att^. date <> att ^. enter <> "00"
+                  & fields . at "pn00012" ?~ att ^. date <> att ^. enter <> "00"
                   & fields . at "pn10009" .~ (form02 ^. fields . at "TEMP_pn10009")
                   & fields . at "pn10102" ?~ "rec_del"
       Crawler.submit form'
 
 
 gotoPeriod :: Period -> Response -> Crawler Response
-gotoPeriod period res = do
+gotoPeriod period' res = do
   let form01 = findForm "form01" res
   let form' = form01
-              & fields . at "pn10100" ?~ period ^. year . to tshow
-              & fields . at "pn10101" ?~ period ^. month . to tshow
+              & fields . at "pn10100" ?~ period' ^. year . to tshow
+              & fields . at "pn10101" ?~ period' ^. month . to tshow
               & fields . at "pn10102" ?~ "search"
   Crawler.submit form'
 
@@ -374,15 +371,15 @@ isEntrance :: Response -> Bool
 isEntrance res = isJust $ getPeriod res
 
 findForm :: Text -> Response -> Crawler.Form
-findForm name res =
-  res ^?! responseBody . html . selected "form" . attributed (ix "name" . only name) . forms
+findForm name' res =
+  res ^?! responseBody . html . selected "form" . attributed (ix "name" . only name') . forms
 
 getPeriod :: Response -> Maybe Period
 getPeriod res = do
   let form01 = findForm "form01" res
-  year <- readMay =<< form01 ^. fields . at "pn10100"
-  month <- readMay =<< form01 ^. fields . at "pn10101"
-  pure $ Period year month
+  year' <- readMay =<< form01 ^. fields . at "pn10100"
+  month' <- readMay =<< form01 ^. fields . at "pn10101"
+  pure $ Period year' month'
 
 rowTexts :: Dom -> [Text]
 rowTexts tr = do

@@ -19,8 +19,7 @@ where
 
 import           ClassyPrelude
 
-import           Control.Lens              (at, to, (%~), (&), (.~), (?~), (^.),
-                                            (^..), (^?), (^?!))
+import           Control.Lens              (to, (.~), (^.))
 import           Control.Monad.Operational (Program, ProgramView,
                                             ProgramViewT (..))
 import qualified Control.Monad.Operational as Op
