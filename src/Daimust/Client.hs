@@ -32,7 +32,7 @@ import           Control.Monad.State       (StateT, evalStateT, execStateT, get,
                                             gets, modify, put, runStateT)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Default              (def)
-import           Network.URI               (parseURIReference)
+import           Network.URI               (URI(..), parseURIReference)
 import           Network.Wreq.Lens         (responseBody)
 import           Network.Wreq.Session      (Session (..), getSessionCookieJar)
 import           Path                      (Abs, File, Path, toFilePath)
@@ -181,7 +181,15 @@ headerTexts = do
 
 getCurrentPeriod :: ClientMonad (Maybe Period)
 getCurrentPeriod = do
-  getPeriod <$> authenticate
+  page <- authenticate
+  Client {..} <- get
+  (res, state') <- runCrawler $ do
+    putState state
+    res <- gotoCurrentPeriod page
+    state' <- getState
+    pure (res, state')
+  put Client { basePage = Just res, state = state', .. }
+  pure $ getPeriod res
 
 moveToPeriod :: Period -> ClientMonad ()
 moveToPeriod period = do
@@ -354,6 +362,11 @@ gotoPeriod period res = do
               & fields . at "pn10102" ?~ "search"
   Crawler.submit form'
 
+gotoCurrentPeriod :: Response -> Crawler Response
+gotoCurrentPeriod res = do
+  let form01 = findForm "form01" res
+  let url = form01 ^. action
+  Crawler.get $ url { uriQuery = "?pn10102=Default" }
 
 -- * Helper functions
 
