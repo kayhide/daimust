@@ -20,6 +20,8 @@ where
 import           ClassyPrelude
 
 import           Control.Lens              (to, (.~), (^.))
+import           Control.Monad.Fail        (MonadFail)
+import qualified Control.Monad.Fail        as Fail
 import           Control.Monad.Operational (Program, ProgramView,
                                             ProgramViewT (..))
 import qualified Control.Monad.Operational as Op
@@ -44,6 +46,8 @@ data CrawlerI a where
   GetState :: CrawlerI State
   PutState :: State -> CrawlerI ()
 
+  Fail :: String -> CrawlerI a
+
   PrintElement :: Xml.Element -> CrawlerI ()
   PrintForm :: Form -> CrawlerI ()
   PrintLink :: Link -> CrawlerI ()
@@ -51,15 +55,18 @@ data CrawlerI a where
 
 type Crawler a = Program CrawlerI a
 
+instance Fail.MonadFail (Program CrawlerI) where
+  fail = Op.singleton . Fail
 
-runCrawler :: MonadIO m => Crawler a -> m a
+
+runCrawler :: (MonadIO m, MonadFail m) => Crawler a -> m a
 runCrawler m = do
   session <- liftIO Session.newSession
   runCrawler' State {..} m
   where
     url = URI "" Nothing "" "" ""
 
-runCrawler' :: forall m a. MonadIO m => State -> Crawler a -> m a
+runCrawler' :: forall m a. (MonadIO m, MonadFail m) => State -> Crawler a -> m a
 runCrawler' state@State {..} = eval . Op.view
   where
     request' :: String -> URI -> [FormParam] -> m (Response, URI)
@@ -98,6 +105,9 @@ runCrawler' state@State {..} = eval . Op.view
 
     eval (PutState state' :>>= k) =
       runCrawler' state' $ k ()
+
+    eval (Fail msg :>>= _) =
+      Fail.fail msg
 
     eval (PrintElement elm :>>= k) =
       printElement' elm

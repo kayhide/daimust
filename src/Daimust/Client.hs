@@ -26,7 +26,9 @@ import           ClassyPrelude             hiding (many, some)
 
 import           Control.Lens              (at, folding, indices, ix, only, to,
                                             traversed, universe, (&), (.~),
-                                            (?~), (^.), (^..), (^?), (^?!))
+                                            (?~), (^.), (^..), (^?), (^?!),
+                                            _Just)
+import           Control.Monad.Fail        (MonadFail)
 import           Control.Monad.State       (StateT, evalStateT, execStateT, get,
                                             gets, modify, put, runStateT)
 import           Control.Monad.Trans.Maybe (MaybeT (..))
@@ -293,7 +295,6 @@ gotoEntrance res = do
 
   pure res4
 
-
 postUpdate :: Attendance -> Response -> Crawler Response
 postUpdate att res = do
   let form02 = findForm "form02" res
@@ -322,7 +323,7 @@ postUpdate att res = do
               & fields . at "pn10s33" ?~ ","
               & fields . at "pn10s35" ?~ ","
               & fields . at "pn10s38" ?~ ","
-  Crawler.submit form'
+  verifyResponse =<< Crawler.submit form'
 
 postDelete :: Attendance -> Response -> Crawler Response
 postDelete att = predelete' >=> delete'
@@ -336,7 +337,7 @@ postDelete att = predelete' >=> delete'
                   & fields . at "pn00012" ?~ att ^. date <> att ^. enter <> "00"
                   & fields . at "pn10009" .~ (form02 ^. fields . at "TEMP_pn10009")
                   & fields . at "pn10102" ?~ "mishonin"
-      Crawler.submit form'
+      verifyResponse =<< Crawler.submit form'
 
     delete' res' = do
       let form01 = findForm "form01" res'
@@ -347,7 +348,7 @@ postDelete att = predelete' >=> delete'
                   & fields . at "pn00012" ?~ att ^. date <> att ^. enter <> "00"
                   & fields . at "pn10009" .~ (form02 ^. fields . at "TEMP_pn10009")
                   & fields . at "pn10102" ?~ "rec_del"
-      Crawler.submit form'
+      verifyResponse =<< Crawler.submit form'
 
 
 gotoPeriod :: Period -> Response -> Crawler Response
@@ -357,15 +358,24 @@ gotoPeriod period' res = do
               & fields . at "pn10100" ?~ period' ^. year . to tshow
               & fields . at "pn10101" ?~ period' ^. month . to tshow
               & fields . at "pn10102" ?~ "search"
-  Crawler.submit form'
+  verifyResponse =<< Crawler.submit form'
 
 gotoCurrentPeriod :: Response -> Crawler Response
 gotoCurrentPeriod res = do
   let form01 = findForm "form01" res
   let url = form01 ^. action
-  Crawler.get $ url { uriQuery = "?pn10102=Default" }
+  verifyResponse =<< Crawler.get url { uriQuery = "?pn10102=Default" }
 
 -- * Helper functions
+
+verifyResponse :: MonadFail m => Response -> m Response
+verifyResponse res = do
+  let err = headMay . drop 1 $
+            res ^.. responseBody . html . selected "font" . attributed (ix "color" . only "red")
+  case err ^? _Just . text of
+    Just msg -> fail $ unpack msg
+    Nothing  -> pure res
+
 
 isEntrance :: Response -> Bool
 isEntrance res = isJust $ getPeriod res
