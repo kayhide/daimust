@@ -30,9 +30,14 @@ run = do
   -- runCommand ["list", "--verbose"]
 
   -- runCommand ["put", "--help"]
-  runCommand ["put", "31", "1000", "2100", "--note", "21", "--verbose"]
+  -- runCommand ["put", "31", "1000", "2100", "--note", "21", "--verbose"]
   -- runCommand ["delete", "31"]
-  runCommand ["list"]
+
+  runCommand ["focus", "prev", "--verbose"]
+  runCommand ["focus"]
+  runCommand ["focus", "none"]
+  runCommand ["focus"]
+  -- runCommand ["list"]
 
   pure ()
 

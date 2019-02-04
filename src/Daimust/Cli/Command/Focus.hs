@@ -10,7 +10,7 @@ import           ClassyPrelude
 import           Options.Applicative
 
 import           Daimust.Cli.Utils   (focus, getStateCacheFile, lookupFocus,
-                                      readSettings)
+                                      readSettings, unfocus)
 import           Daimust.Client      (evalClient, getCurrentPeriod, newClient,
                                       setCacheFile, setVerbose)
 import           Daimust.Data.Period (Period (..), formatPeriod)
@@ -27,6 +27,7 @@ data Focusing
   = Current
   | Prev
   | Next
+  | None
   deriving (Eq, Show)
 
 focusingP :: Parser (Maybe Focusing)
@@ -35,6 +36,7 @@ focusingP =
   ( command "current" (info (pure (Just Current) <**> helper) (progDesc "Focus current period" ))
  <> command "prev" (info (pure (Just Prev) <**> helper) (progDesc "Focus prev period" ))
  <> command "next" (info (pure (Just Next) <**> helper) (progDesc "Focus next period" ))
+ <> command "none" (info (pure (Just None) <**> helper) (progDesc "Unfocus" ))
   )
   <|> pure Nothing
 
@@ -52,11 +54,15 @@ run args@Args {..} = do
       getCurrent args
       >>= maybe failGetCurrentPeriod focus
     Just Prev ->
-      lookupFocus <|> getCurrent args
+      lookupFocus
+      >>= maybe (getCurrent args) (pure . pure)
       >>= maybe failGetCurrentPeriod (focus . decrement)
     Just Next ->
-      lookupFocus <|> getCurrent args
+      lookupFocus
+      >>= maybe (getCurrent args) (pure . pure)
       >>= maybe failGetCurrentPeriod (focus . increment)
+    Just None ->
+      unfocus
     _ -> pure ()
 
   lookupFocus
