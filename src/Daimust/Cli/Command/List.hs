@@ -41,5 +41,5 @@ run Args {..} = do
     headers <- headerTexts
     attendances <- listAttendances
 
-    traverse_ putStrLn headers
+    traverse_ say headers
     traverse_ printAttendance attendances

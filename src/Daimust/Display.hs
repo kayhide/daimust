@@ -28,12 +28,12 @@ displayTable = displayTableWith def
 displayTableWith :: DisplayTableConfig -> [Row] -> IO ()
 displayTableWith DisplayTableConfig {..} table = do
   let pick' = maybe id pickColumns' pickColumns
-  traverse_ (print' . second pick') $ zip [0..] table
+  traverse_ (sayShow' . second pick') $ zip [0..] table
   where
     pickColumns' :: [Int] -> Row -> Row
     pickColumns' idxs xs = xs ^.. traversed . indices (`elem` idxs)
 
-    print' :: (Int, Row) -> IO ()
-    print' ((`elem` headerRows) -> True, row) = putStrLn $ unwords row
-    print' ((`elem` dropRows)   -> True, row) = pure ()
-    print' (_,                           row) = putStrLn $ intercalate "\t" row
+    sayShow' :: (Int, Row) -> IO ()
+    sayShow' ((`elem` headerRows) -> True, row) = say $ unwords row
+    sayShow' ((`elem` dropRows)   -> True, row) = pure ()
+    sayShow' (_,                           row) = say $ intercalate "\t" row

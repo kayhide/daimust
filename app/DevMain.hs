@@ -3,12 +3,12 @@ where
 
 import           ClassyPrelude
 
-import           Path                    (toFilePath)
-import           System.Environment      (withArgs)
+import           Path               (toFilePath)
+import           System.Environment (withArgs)
 
-import qualified Daimust.Cli             as Cli
-import           Daimust.Cli.Utils       (getStateCacheFile)
-import qualified Daimust.Crawler         as Crawler
+import qualified Daimust.Cli        as Cli
+import           Daimust.Cli.Utils  (getStateCacheFile)
+import qualified Daimust.Crawler    as Crawler
 
 
 run :: IO ()
@@ -37,13 +37,13 @@ run = do
   runCommand ["focus"]
   runCommand ["focus", "none"]
   runCommand ["focus"]
-  -- runCommand ["list"]
+  runCommand ["list"]
 
   pure ()
 
 runCommand :: [Text] -> IO ()
 runCommand args = do
-  putStrLn $ "$ daimust " <> unwords args
+  say $ "$ daimust " <> unwords args
   withArgs (unpack <$> args) Cli.run
 
 invalidateCache :: IO ()

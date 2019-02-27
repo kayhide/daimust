@@ -242,7 +242,7 @@ sayInfo :: Text -> ClientMonad ()
 sayInfo msg = do
   Client { verbose } <- get
   when verbose $ do
-    putStrLn msg
+    say msg
 
 
 -- * Crawler actions

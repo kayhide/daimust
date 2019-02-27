@@ -80,7 +80,7 @@ runCrawler' state@State {..} = eval . Op.view
           Session.customHistoriedPayloadMethodWith method defaults session (show url') body
         _ ->
           error $ "Invalid http method: " <> method
-      -- print $ hr ^. hrFinalRequest
+      -- sayShow $ hr ^. hrFinalRequest
       pure (hr ^. hrFinalResponse, getUri $ hr ^. hrFinalRequest)
 
     eval :: ProgramView CrawlerI a -> m a
@@ -168,23 +168,23 @@ printElement' x = putStr . toStrict $ x ^. Xml.renderWith (rsPretty .~ True)
 
 printForm' :: MonadIO m => Form -> m ()
 printForm' form = do
-  putStrLn $ mconcat
+  say $ mconcat
     [ form ^. dom . name
     , form ^. domId . to ("#" <>)
     , form ^. domClass . to ("." <>)
     ]
-  print $ form ^. action
-  traverse_ print $ Map.toAscList $ form ^. fields
-  -- print' $ form ^. dom
-  putStrLn ""
+  sayShow $ form ^. action
+  traverse_ sayShow $ Map.toAscList $ form ^. fields
+  -- sayShow' $ form ^. dom
+  say ""
 
 printLink' :: MonadIO m => Link -> m ()
 printLink' link' = do
-  putStrLn $ mconcat
+  say $ mconcat
     [ link' ^. dom . name
     , link' ^. domId . to ("#" <>)
     , link' ^. domClass . to ("." <>)
     ]
-  print $ link' ^. href
-  putStrLn $ link' ^. innerText
-  -- print' $ link' ^. dom
+  sayShow $ link' ^. href
+  say $ link' ^. innerText
+  -- sayShow' $ link' ^. dom

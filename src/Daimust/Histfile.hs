@@ -48,7 +48,7 @@ readAll = do
 
 printHistRecord :: HistRecord -> IO ()
 printHistRecord HistRecord {..} =
-  putStrLn $ tshow day <> "  " <> tshow startAt <> " - " <> tshow endAt
+  say $ tshow day <> "  " <> tshow startAt <> " - " <> tshow endAt
 
 -- | Internal helpers
 

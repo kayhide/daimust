@@ -66,7 +66,7 @@ run args@Args {..} = do
     _ -> pure ()
 
   lookupFocus
-    >>= putStrLn . maybe "no focus" formatPeriod
+    >>= say . maybe "no focus" formatPeriod
   where
     failGetCurrentPeriod :: IO ()
     failGetCurrentPeriod = fail "Failed to get current period"
