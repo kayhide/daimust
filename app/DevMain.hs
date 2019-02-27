@@ -15,6 +15,7 @@ run :: IO ()
 run = do
   -- invalidateCache               -- Invalidate cached state immediately.
 
+  runCommand ["--help"]
   -- runCommand ["focus", "current"]
   -- replicateM_ 14 $ runCommand ["focus", "prev"]
   -- runCommand ["focus"]
@@ -33,11 +34,11 @@ run = do
   -- runCommand ["put", "31", "1000", "2100", "--note", "21", "--verbose"]
   -- runCommand ["delete", "31"]
 
-  runCommand ["focus", "prev", "--verbose"]
-  runCommand ["focus"]
-  runCommand ["focus", "none"]
-  runCommand ["focus"]
-  runCommand ["list"]
+  -- runCommand ["focus", "prev", "--verbose"]
+  -- runCommand ["focus"]
+  -- runCommand ["focus", "none"]
+  -- runCommand ["focus"]
+  -- runCommand ["list"]
 
   pure ()
 

@@ -1,8 +1,9 @@
 resolver: lts-12.11
 
 packages:
-- .
+  - .
 
 extra-deps:
-- xml-html-conduit-lens-0.3.2.4
+  - xml-html-conduit-lens-0.3.2.4
+  - extensible-0.5
 
