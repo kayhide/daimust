@@ -7,15 +7,16 @@ import           Path               (toFilePath)
 import           System.Environment (withArgs)
 
 import qualified Daimust.Cli        as Cli
-import           Daimust.Cli.Utils  (getStateCacheFile)
+import           Daimust.Config     (runApp)
 import qualified Daimust.Crawler    as Crawler
+import qualified Daimust.Paths      as Paths
 
 
 run :: IO ()
 run = do
   -- invalidateCache               -- Invalidate cached state immediately.
 
-  runCommand ["--help"]
+  -- runCommand ["--help"]
   -- runCommand ["focus", "current"]
   -- replicateM_ 14 $ runCommand ["focus", "prev"]
   -- runCommand ["focus"]
@@ -24,6 +25,7 @@ run = do
   -- runCommand ["focus"]
 
   -- runCommand ["put", "26", "1000", "2100"]
+  -- runCommand ["list"]
   -- runCommand ["delete", "26"]
   -- runCommand ["list"]
 
@@ -38,7 +40,7 @@ run = do
   -- runCommand ["focus"]
   -- runCommand ["focus", "none"]
   -- runCommand ["focus"]
-  -- runCommand ["list"]
+  runCommand ["list", "--verbose"]
 
   pure ()
 
@@ -48,8 +50,9 @@ runCommand args = do
   withArgs (unpack <$> args) Cli.run
 
 invalidateCache :: IO ()
-invalidateCache = do
-  file <- getStateCacheFile
-  Crawler.runCrawler Crawler.getState
-    >>= Crawler.dumpState
-    >>= writeFile (toFilePath file)
+invalidateCache =
+  runApp $ do
+    file <- Paths.getCacheFile
+    Crawler.runCrawler Crawler.getState
+      >>= Crawler.dumpState
+      >>= writeFile (toFilePath file)

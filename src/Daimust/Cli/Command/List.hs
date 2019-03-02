@@ -10,16 +10,11 @@ import           ClassyPrelude
 import           Options.Applicative
 import           System.Environment      (setEnv)
 
-import           Configurable            (HasConfig)
-import           Daimust.Cli.Utils       (getStateCacheFile, lookupFocus,
-                                          readSettings)
-import           Daimust.Client          (headerTexts, listAttendances,
-                                          moveToPeriod, newClient, runClient,
-                                          setCacheFile, setVerbose)
-import           Daimust.Config          (RIO)
-import           Daimust.Config          (activate', runApp)
+import           Daimust.Config          (runApp)
+import           Daimust.Daim            (headerTexts, listAttendances,
+                                          moveToPeriod, runClient)
 import           Daimust.Data.Attendance
-import qualified Plugin.Logger           as Logger
+import           Daimust.Paths           (lookupFocus)
 
 
 data Args =
@@ -39,13 +34,9 @@ run Args {..} = do
   when _verbose $
     setEnv "LOGGER_VERBOSE" "true"
 
-  runApp $ liftIO $ do
-    client <- newClient =<< readSettings
+  runApp $ do
     period' <- lookupFocus
-    cacheFile' <- getStateCacheFile
-    void $ flip runClient client $ do
-      setVerbose _verbose
-      setCacheFile cacheFile'
+    runClient $ do
       traverse_ moveToPeriod period'
       headers <- headerTexts
       attendances <- listAttendances

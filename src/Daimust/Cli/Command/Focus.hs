@@ -8,12 +8,12 @@ where
 import           ClassyPrelude
 
 import           Options.Applicative
+import           System.Environment  (setEnv)
 
-import           Daimust.Cli.Utils   (focus, getStateCacheFile, lookupFocus,
-                                      readSettings, unfocus)
-import           Daimust.Client      (evalClient, getCurrentPeriod, newClient,
-                                      setCacheFile, setVerbose)
+import           Daimust.Config      (RIO, runApp)
+import           Daimust.Daim        (getCurrentPeriod, runClient)
 import           Daimust.Data.Period (Period (..), formatPeriod)
+import           Daimust.Paths       (focus, lookupFocus, unfocus)
 
 
 data Args =
@@ -48,38 +48,33 @@ argsP =
   <*> switch (long "verbose" <> short 'v' <> help "Print more")
 
 run :: Args -> IO ()
-run args@Args {..} = do
-  case _focusing of
+run Args {..} = do
+  when _verbose $
+    setEnv "LOGGER_VERBOSE" "true"
+
+  runApp $ do
+   case _focusing of
     Just Current ->
-      getCurrent args
+      runClient getCurrentPeriod
       >>= maybe failGetCurrentPeriod focus
     Just Prev ->
       lookupFocus
-      >>= maybe (getCurrent args) (pure . pure)
+      >>= maybe (runClient getCurrentPeriod) (pure . pure)
       >>= maybe failGetCurrentPeriod (focus . decrement)
     Just Next ->
       lookupFocus
-      >>= maybe (getCurrent args) (pure . pure)
+      >>= maybe (runClient getCurrentPeriod) (pure . pure)
       >>= maybe failGetCurrentPeriod (focus . increment)
     Just None ->
       unfocus
     _ -> pure ()
 
-  lookupFocus
+   lookupFocus
     >>= say . maybe "no focus" formatPeriod
   where
-    failGetCurrentPeriod :: IO ()
+    failGetCurrentPeriod :: RIO env ()
     failGetCurrentPeriod = fail "Failed to get current period"
 
-
-getCurrent :: Args -> IO (Maybe Period)
-getCurrent Args {..} = do
-  client <- newClient =<< readSettings
-  cacheFile' <- getStateCacheFile
-  flip evalClient client $ do
-    setVerbose _verbose
-    setCacheFile cacheFile'
-    getCurrentPeriod
 
 decrement :: Period -> Period
 decrement Period {..} =

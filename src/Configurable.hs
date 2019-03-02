@@ -9,6 +9,9 @@ import           Control.Lens          (Lens')
 import           Data.Extensible       (Forall, Member (..), item)
 import           Data.Extensible.Plain (AllOf, (<%))
 import           Data.Proxy            (Proxy (..))
+import           Network.URI           (URI, parseURI)
+import           Path                  (Abs, Dir, File, Path, Rel, parseAbsDir,
+                                        parseAbsFile, parseRelDir, parseRelFile)
 import           System.Environment    (lookupEnv)
 
 
@@ -89,3 +92,23 @@ instance FetchSetting Text where
 instance FetchSetting [Text] where
   fetchSetting key def =
     maybe def (words . pack) <$> lookupEnv (unpack key)
+
+instance FetchSetting URI where
+  fetchSetting key def =
+    fromMaybe def . (parseURI =<<) <$> lookupEnv (unpack key)
+
+instance FetchSetting (Path Abs Dir) where
+  fetchSetting key def =
+    fromMaybe def . (parseAbsDir =<<) <$> lookupEnv (unpack key)
+
+instance FetchSetting (Path Rel Dir) where
+  fetchSetting key def =
+    fromMaybe def . (parseRelDir =<<) <$> lookupEnv (unpack key)
+
+instance FetchSetting (Path Abs File) where
+  fetchSetting key def =
+    fromMaybe def . (parseAbsFile =<<) <$> lookupEnv (unpack key)
+
+instance FetchSetting (Path Rel File) where
+  fetchSetting key def =
+    fromMaybe def . (parseRelFile =<<) <$> lookupEnv (unpack key)

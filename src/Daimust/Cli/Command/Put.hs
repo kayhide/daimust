@@ -9,12 +9,14 @@ import           ClassyPrelude
 
 import           Control.Lens            (filtered, (&), (.~), (^.), (^..))
 import           Options.Applicative
+import           System.Environment      (setEnv)
 
-import           Daimust.Cli.Utils       (lookupFocus, readSettings)
-import           Daimust.Client          (ClientMonad, listAttendances,
-                                          moveToPeriod, newClient, runClient,
-                                          setVerbose, updateAttendance)
+import           Daimust.Config          (runApp)
+import           Daimust.Daim            (ClientMonad, listAttendances,
+                                          moveToPeriod, runClient,
+                                          updateAttendance)
 import           Daimust.Data.Attendance
+import qualified Daimust.Paths           as Paths
 
 
 data Args =
@@ -41,16 +43,18 @@ argsP =
 
 run :: Args -> IO ()
 run Args {..} = do
-  client <- newClient =<< readSettings
-  period' <- lookupFocus
-  void $ flip runClient client $ do
-    setVerbose _verbose
-    maybe (pure ()) moveToPeriod period'
-    attendances <- listAttendances
-    let att = headMay $ attendances ^.. traverse . filtered ((== _day) . (^. day))
-    maybe (pure ()) (update' _enter _leave _noteValue) att
+  when _verbose $
+    setEnv "LOGGER_VERBOSE" "true"
 
-update' :: AttendanceEnter -> AttendanceLeave -> Text -> Attendance -> ClientMonad ()
+  runApp $ do
+    period' <- Paths.lookupFocus
+    runClient $ do
+      maybe (pure ()) moveToPeriod period'
+      attendances <- listAttendances
+      let att = headMay $ attendances ^.. traverse . filtered ((== _day) . (^. day))
+      maybe (pure ()) (update' _enter _leave _noteValue) att
+
+update' :: AttendanceEnter -> AttendanceLeave -> Text -> Attendance -> ClientMonad env ()
 update' enter' leave' noteValue' att =
   updateAttendance $ att
   & enter .~ enter'

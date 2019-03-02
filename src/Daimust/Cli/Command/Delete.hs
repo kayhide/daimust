@@ -9,12 +9,13 @@ import           ClassyPrelude
 
 import           Control.Lens            (filtered, (^.), (^..))
 import           Options.Applicative
+import           System.Environment      (setEnv)
 
-import           Daimust.Cli.Utils       (lookupFocus, readSettings)
-import           Daimust.Client          (deleteAttendance, listAttendances,
-                                          moveToPeriod, newClient, runClient,
-                                          setVerbose)
+import           Daimust.Config          (runApp)
+import           Daimust.Daim            (deleteAttendance, listAttendances,
+                                          moveToPeriod, runClient)
 import           Daimust.Data.Attendance
+import           Daimust.Paths           (lookupFocus)
 
 
 data Args =
@@ -33,12 +34,14 @@ argsP =
 
 run :: Args -> IO ()
 run Args {..} = do
-  client <- newClient =<< readSettings
-  period' <- lookupFocus
-  void $ flip runClient client $ do
-    setVerbose _verbose
-    maybe (pure ()) moveToPeriod period'
-    attendances <- listAttendances
-    let att = headMay $ attendances ^.. traverse . filtered ((== _day) . (^. day))
-    maybe (pure ()) deleteAttendance att
+  when _verbose $
+    setEnv "LOGGER_VERBOSE" "true"
+
+  runApp $ do
+    period' <- lookupFocus
+    runClient $ do
+      maybe (pure ()) moveToPeriod period'
+      attendances <- listAttendances
+      let att = headMay $ attendances ^.. traverse . filtered ((== _day) . (^. day))
+      maybe (pure ()) deleteAttendance att
 

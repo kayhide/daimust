@@ -1,17 +1,8 @@
-module Daimust.Client
-  ( Settings (..)
-  , Attendance (..)
+module Daimust.Daim
+  ( Attendance (..)
   , Period (..)
-  , Client
-  , newClient
   , ClientMonad
   , runClient
-  , evalClient
-  , execClient
-  , setVerbose
-  , isVerbose
-  , setCacheFile
-  , getCacheFile
   , authenticate
   , headerTexts
   , getCurrentPeriod
@@ -25,12 +16,11 @@ where
 import           ClassyPrelude             hiding (many, some)
 
 import           Control.Lens              (at, folding, indices, ix, only, to,
-                                            traversed, universe, (&), (.~),
-                                            (?~), (^.), (^..), (^?), (^?!),
-                                            _Just)
+                                            traversed, universe, view, (&),
+                                            (.~), (?~), (^.), (^..), (^?),
+                                            (^?!), _Just)
 import           Control.Monad.Fail        (MonadFail)
-import           Control.Monad.State       (StateT, evalStateT, execStateT, get,
-                                            gets, modify, put, runStateT)
+import           Control.Monad.State       (StateT, evalStateT, get, gets, put)
 import           Control.Monad.Trans.Maybe (MaybeT (..))
 import           Data.Default              (def)
 import           Network.URI               (URI (..), parseURIReference)
@@ -43,26 +33,22 @@ import           Text.Xml.Lens
 
 import           Debug.Trace               as Debug
 
+import           Configurable              (HasConfig, setting)
+import           Daimust.Config            (RIO)
 import           Daimust.Crawler           (Crawler, Dom, Response, URI, action,
                                             dom, fields, forms, frames,
                                             getState, links, printForm,
                                             putState, refresh, runCrawler,
                                             selected, src)
 import qualified Daimust.Crawler           as Crawler
+import           Daimust.Daim.Config
 import           Daimust.Data.Attendance
 import           Daimust.Data.Period
 import           Daimust.Display
-
-
--- * Public data types
-
-data Settings =
-  Settings
-  { loginUrl :: URI
-  , username :: Text
-  , password :: Text
-  }
-  deriving (Eq, Show)
+import qualified Daimust.Paths             as Paths
+import           Daimust.Paths.Config      (PathsConfig)
+import qualified Plugin.Logger             as Logger
+import           Plugin.Logger.Config      (LoggerConfig)
 
 
 -- * Table config
@@ -80,97 +66,60 @@ attendancesTable =
 
 data Client =
   Client
-  { settings  :: Settings
-  , basePage  :: Maybe Response
+  { basePage  :: Maybe Response
   , state     :: Crawler.State
-  , verbose   :: Bool
   , cacheFile :: Maybe (Path Abs File)
   }
   deriving (Show)
 
-newClient :: Settings -> IO Client
-newClient settings = do
-  state <- runCrawler getState
-  pure Client { basePage = Nothing, verbose = False, cacheFile = Nothing, ..}
-
 
 -- * Client monad
 
-type ClientMonad a = StateT Client IO a
+type ClientMonad env a =
+  ( HasConfig env LoggerConfig
+  , HasConfig env DaimConfig
+  )
+  => StateT Client (RIO env) a
 
-runClient :: ClientMonad a -> Client -> IO (a, Client)
-runClient = runStateT
-
-evalClient :: ClientMonad a -> Client -> IO a
-evalClient = evalStateT
-
-execClient :: ClientMonad a -> Client -> IO Client
-execClient = execStateT
+runClient
+  :: ( HasConfig env LoggerConfig
+     , HasConfig env PathsConfig
+     , HasConfig env DaimConfig
+     )
+  => ClientMonad env a -> RIO env a
+runClient action' = do
+  state <- runCrawler getState
+  cacheFile' <- Paths.getCacheFile
+  evalStateT action' Client { basePage = Nothing, cacheFile = Just cacheFile', .. }
 
 
 -- * Operations
 
-setVerbose :: Bool -> ClientMonad ()
-setVerbose b =
-  modify $ \client -> client { verbose = b }
-
-isVerbose :: ClientMonad Bool
-isVerbose = gets verbose
-
-setCacheFile :: Path Abs File -> ClientMonad ()
-setCacheFile file =
-  modify $ \client -> client { cacheFile = Just file }
-
-getCacheFile :: ClientMonad (Maybe (Path Abs File))
-getCacheFile = gets cacheFile
-
-cacheState :: ClientMonad ()
-cacheState = void $ runMaybeT $ do
-  file <- MaybeT $ gets cacheFile
-  lift $ do
-    sayInfo "Caching State"
-    gets state
-      >>= Crawler.dumpState
-      >>= writeFile (toFilePath file)
-
-uncacheState :: ClientMonad ()
-uncacheState = void $ runMaybeT $ do
-  file <- MaybeT $ gets cacheFile
-  guard =<< doesFileExist file
-  lift $ sayInfo "Uncaching State"
-  state' <- MaybeT $ Crawler.restoreState =<< readFile (toFilePath file)
-  res :: Response <- runCrawler $ do
-    putState state'
-    refresh
-  guard $ isEntrance res
-  lift $ do
-    Client {..} <- get
-    put Client { basePage = Just res, state = state', .. }
-
-authenticate :: ClientMonad Response
+authenticate :: ClientMonad env Response
 authenticate =
   gets basePage
   >>= maybe tryRestore (pure . Just)
   >>= maybe go pure
   where
-    tryRestore :: ClientMonad (Maybe Response)
+    tryRestore :: ClientMonad env (Maybe Response)
     tryRestore = do
       uncacheState
       gets basePage
 
-    go :: ClientMonad Response
+    go :: ClientMonad env Response
     go = do
       Client {..} <- get
-      sayInfo "Authenticating"
+      setting' <- view (setting @_ @DaimConfig)
+      Logger.info "Authenticating"
       (res, state') <- runCrawler $ do
-        res <- gotoEntrance =<< login settings
+        res <- gotoEntrance =<< login setting'
         state' <- getState
         pure (res, state')
       put Client { basePage = Just res, state = state', .. }
       cacheState
       pure res
 
-headerTexts :: ClientMonad [Text]
+headerTexts :: ClientMonad env [Text]
 headerTexts = do
   page <- authenticate
   pure $ fromMaybe (pure []) $ do
@@ -178,7 +127,7 @@ headerTexts = do
     let DisplayTableConfig { headerRows } = attendancesTable
     pure $ (table ^.. selected "tr") ^.. traversed . indices (`elem` headerRows) . to (unwords . rowTexts)
 
-getCurrentPeriod :: ClientMonad (Maybe Period)
+getCurrentPeriod :: ClientMonad env (Maybe Period)
 getCurrentPeriod = do
   page <- authenticate
   Client {..} <- get
@@ -190,7 +139,7 @@ getCurrentPeriod = do
   put Client { basePage = Just res, state = state', .. }
   pure $ getPeriod res
 
-moveToPeriod :: Period -> ClientMonad ()
+moveToPeriod :: Period -> ClientMonad env ()
 moveToPeriod period' = do
   page <- authenticate
   let current = getPeriod page
@@ -203,7 +152,7 @@ moveToPeriod period' = do
       pure (res, state')
     put Client { basePage = Just res, state = state', .. }
 
-listAttendances :: ClientMonad [Attendance]
+listAttendances :: ClientMonad env [Attendance]
 listAttendances = do
   page <- authenticate
   pure $ fromMaybe [] $ do
@@ -211,11 +160,11 @@ listAttendances = do
     table <- lastMay $ page ^.. responseBody . html . selected "table"
     pure . catMaybes $ parseItem period' <$> table ^.. selected "tr"
 
-updateAttendance :: Attendance -> ClientMonad ()
+updateAttendance :: Attendance -> ClientMonad env ()
 updateAttendance att = do
   page <- authenticate
   Client { .. } <- get
-  sayInfo $ "Updating: Attendane #" <> att ^. date
+  Logger.info $ "Updating: Attendane #" <> att ^. date
   client' <- runCrawler $ do
     putState state
     res <- postUpdate att page
@@ -223,11 +172,11 @@ updateAttendance att = do
     pure Client { basePage = Just res, state = state', .. }
   put client'
 
-deleteAttendance :: Attendance -> ClientMonad ()
+deleteAttendance :: Attendance -> ClientMonad env ()
 deleteAttendance att = do
   page <- authenticate
   Client { .. } <- get
-  sayInfo $ "Deleting: Attendance #" <> att ^. date
+  Logger.info $ "Deleting: Attendance #" <> att ^. date
   client' <- runCrawler $ do
     putState state
     res <- postDelete att page
@@ -236,24 +185,41 @@ deleteAttendance att = do
   put client'
 
 
--- * Logging functions
+-- * Cache
 
-sayInfo :: Text -> ClientMonad ()
-sayInfo msg = do
-  Client { verbose } <- get
-  when verbose $ do
-    say msg
+cacheState :: ClientMonad env ()
+cacheState = void $ runMaybeT $ do
+  file <- MaybeT $ gets cacheFile
+  lift $ do
+    Logger.info "Caching State"
+    gets state
+      >>= Crawler.dumpState
+      >>= writeFile (toFilePath file)
+
+uncacheState :: ClientMonad env ()
+uncacheState = void $ runMaybeT $ do
+  file <- MaybeT $ gets cacheFile
+  guard =<< doesFileExist file
+  lift $ Logger.info "Uncaching State"
+  state' <- MaybeT $ Crawler.restoreState =<< readFile (toFilePath file)
+  res :: Response <- runCrawler $ do
+    putState state'
+    refresh
+  guard $ isEntrance res
+  lift $ do
+    Client {..} <- get
+    put Client { basePage = Just res, state = state', .. }
 
 
 -- * Crawler actions
 
-login :: Settings -> Crawler Response
-login Settings {..} = do
-  res <- Crawler.get loginUrl
+login :: DaimSetting -> Crawler Response
+login DaimSetting {..} = do
+  res <- Crawler.get _url
   let form = res ^?! responseBody . html . forms
       form' = form
-              & fields . at "PN_ID" ?~ username
-              & fields . at "PN_PASS" ?~ password
+              & fields . at "PN_ID" ?~ _username
+              & fields . at "PN_PASS" ?~ _password
   Crawler.submit form'
 
 gotoEntrance :: Response -> Crawler Response
@@ -270,16 +236,16 @@ gotoEntrance res = do
             between (char '\'') (char '\'') (many (notChar '\'')) <* many (char ',')
             )
 
-    let Just (action', username, password) = do
+    let Just (action', username', password') = do
           onload <- res1 ^. responseBody . html . selected "body" . attr "onLoad"
-          [u, p, url] <- (parseMaybe @()) onloadP onload
-          url' <- parseURIReference url
-          pure (url', pack u, pack p)
+          [u, p, url'] <- (parseMaybe @()) onloadP onload
+          url'' <- parseURIReference url'
+          pure (url'', pack u, pack p)
 
     let form' = res1 ^?! responseBody . html . forms
                 & action .~ action'
-                & fields . at "pn0001" ?~ username
-                & fields . at "pn0002" ?~ password
+                & fields . at "pn0001" ?~ username'
+                & fields . at "pn0002" ?~ password'
     Crawler.submit form'
 
   res3 <- do
@@ -363,8 +329,8 @@ gotoPeriod period' res = do
 gotoCurrentPeriod :: Response -> Crawler Response
 gotoCurrentPeriod res = do
   let form01 = findForm "form01" res
-  let url = form01 ^. action
-  verifyResponse =<< Crawler.get url { uriQuery = "?pn10102=Default" }
+  let url' = form01 ^. action
+  verifyResponse =<< Crawler.get url' { uriQuery = "?pn10102=Default" }
 
 -- * Helper functions
 
