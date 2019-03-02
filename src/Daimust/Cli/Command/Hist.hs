@@ -9,21 +9,17 @@ import           ClassyPrelude
 
 import           Options.Applicative
 
+import           Daimust.Config      (AppIO)
 import qualified Daimust.Histfile    as Histfile
 
 
-data Args =
-  Args
-  { _verbose   :: Bool
-  }
+data Args = Args
   deriving (Show)
 
 
 argsP :: Parser Args
-argsP =
-  Args
-  <$> switch (long "verbose" <> short 'v' <> help "Print more")
+argsP = pure Args
 
-run :: Args -> IO ()
-run Args {..} =
+run :: Args -> AppIO ()
+run _ = liftIO $
   traverse_ Histfile.printHistRecord =<< Histfile.readAll

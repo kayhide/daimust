@@ -8,10 +8,8 @@ where
 import           ClassyPrelude
 
 import           Options.Applicative
-import           System.Environment  (setEnv)
 
-import           Configurable        (RIO)
-import           Daimust.Config      (runApp)
+import           Daimust.Config      (AppIO)
 import           Daimust.Daim        (getCurrentPeriod, runClient)
 import           Daimust.Data.Period (Period (..), formatPeriod)
 import           Daimust.Paths       (focus, lookupFocus, unfocus)
@@ -20,7 +18,6 @@ import           Daimust.Paths       (focus, lookupFocus, unfocus)
 data Args =
   Args
   { _focusing :: Maybe Focusing
-  , _verbose  :: Bool
   }
   deriving (Show)
 
@@ -46,15 +43,10 @@ argsP :: Parser Args
 argsP =
   Args
   <$> focusingP
-  <*> switch (long "verbose" <> short 'v' <> help "Print more")
 
-run :: Args -> IO ()
+run :: Args -> AppIO ()
 run Args {..} = do
-  when _verbose $
-    setEnv "LOGGER_VERBOSE" "true"
-
-  runApp $ do
-   case _focusing of
+  case _focusing of
     Just Current ->
       runClient getCurrentPeriod
       >>= maybe failGetCurrentPeriod focus
@@ -70,10 +62,10 @@ run Args {..} = do
       unfocus
     _ -> pure ()
 
-   lookupFocus
+  lookupFocus
     >>= say . maybe "no focus" formatPeriod
   where
-    failGetCurrentPeriod :: RIO env ()
+    failGetCurrentPeriod :: MonadIO m => m ()
     failGetCurrentPeriod = fail "Failed to get current period"
 
 

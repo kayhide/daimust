@@ -68,7 +68,7 @@ activateWith
      , Forall (HasConfig env) (Deps a)
      , env ~ AllOf confs
      )
-  => (Setting a -> Setting a) ->env -> IO (AllOf (Setting a ': Running a ': confs))
+  => (Setting a -> Setting a) -> env -> IO (AllOf (Setting a ': Running a ': confs))
 activateWith modify env = do
   setting' <- modify <$> ready
   running' <- start setting' env

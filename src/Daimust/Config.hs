@@ -26,6 +26,8 @@ activate' =
   >>= activate @DaimConfig
   >>= pure . shrink
 
+type AppIO = RIO AppConfig
+
 runApp :: RIO AppConfig a -> IO a
 runApp action = do
   env <- activate'
