@@ -33,8 +33,7 @@ import           Text.Xml.Lens
 
 import           Debug.Trace               as Debug
 
-import           Configurable              (HasConfig, setting)
-import           Daimust.Config            (RIO)
+import           Configurable              (HasConfig, RIO, setting)
 import           Daimust.Crawler           (Crawler, Dom, Response, URI, action,
                                             dom, fields, forms, frames,
                                             getState, links, printForm,

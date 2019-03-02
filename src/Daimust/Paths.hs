@@ -13,8 +13,7 @@ import           Control.Lens         (view)
 import           Path                 (Abs, Dir, File, Path, toFilePath, (</>))
 import           Path.IO              (doesFileExist, removeFile)
 
-import           Configurable         (HasConfig, setting)
-import           Daimust.Config       (RIO)
+import           Configurable         (HasConfig, RIO, setting)
 import           Daimust.Data.Period  (Period (..), formatPeriod,
                                        parsePeriodMaybe)
 import           Daimust.Paths.Config

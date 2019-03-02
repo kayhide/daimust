@@ -5,7 +5,7 @@ import           ClassyPrelude
 import           Data.Extensible       (nil, shrink)
 import           Data.Extensible.Plain (AllOf)
 
-import           Configurable          (ToConfigs, activate)
+import           Configurable          (RIO, ToConfigs, activate)
 import           Daimust.Daim.Config   (DaimConfig)
 import           Daimust.Paths.Config  (PathsConfig)
 import           Plugin.Logger.Config  (LoggerConfig)
@@ -25,8 +25,6 @@ activate' =
   >>= activate @PathsConfig
   >>= activate @DaimConfig
   >>= pure . shrink
-
-type RIO env = ReaderT env IO
 
 runApp :: RIO AppConfig a -> IO a
 runApp action = do

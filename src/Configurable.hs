@@ -15,6 +15,9 @@ import           Path                  (Abs, Dir, File, Path, Rel, parseAbsDir,
 import           System.Environment    (lookupEnv)
 
 
+type RIO env = ReaderT env IO
+
+
 class Configurable (a :: *) where
   type Setting a = r | r -> a
   type Running a = r | r -> a

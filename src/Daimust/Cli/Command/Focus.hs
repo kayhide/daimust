@@ -10,7 +10,8 @@ import           ClassyPrelude
 import           Options.Applicative
 import           System.Environment  (setEnv)
 
-import           Daimust.Config      (RIO, runApp)
+import           Configurable        (RIO)
+import           Daimust.Config      (runApp)
 import           Daimust.Daim        (getCurrentPeriod, runClient)
 import           Daimust.Data.Period (Period (..), formatPeriod)
 import           Daimust.Paths       (focus, lookupFocus, unfocus)
