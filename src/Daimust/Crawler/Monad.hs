@@ -11,15 +11,12 @@ module Daimust.Crawler.Monad
   , refresh
   , submit
   , click
-  , printElement
-  , printForm
-  , printLink
   )
 where
 
 import           ClassyPrelude
 
-import           Control.Lens              (to, (.~), (^.))
+import           Control.Lens              (to, (^.))
 import           Control.Monad.Fail        (MonadFail)
 import qualified Control.Monad.Fail        as Fail
 import           Control.Monad.Operational (Program, ProgramView,
@@ -31,9 +28,7 @@ import           Network.URI
 import           Network.Wreq              (FormParam (..), defaults)
 import           Network.Wreq.Lens         (hrFinalRequest, hrFinalResponse)
 import qualified Network.Wreq.Session      as Session
-import           Text.Xml.Lens             as Xml
 
-import           Daimust.Crawler.Lens
 import           Daimust.Crawler.State     (State (..), dumpState, restoreState)
 import           Daimust.Crawler.Type
 
@@ -47,10 +42,6 @@ data CrawlerI a where
   PutState :: State -> CrawlerI ()
 
   Fail :: String -> CrawlerI a
-
-  PrintElement :: Xml.Element -> CrawlerI ()
-  PrintForm :: Form -> CrawlerI ()
-  PrintLink :: Link -> CrawlerI ()
 
 
 type Crawler a = Program CrawlerI a
@@ -109,18 +100,6 @@ runCrawler' state@State {..} = eval . Op.view
     eval (Fail msg :>>= _) =
       Fail.fail msg
 
-    eval (PrintElement elm :>>= k) =
-      printElement' elm
-      >>= runCrawler' state . k
-
-    eval (PrintForm elm :>>= k) =
-      printForm' elm
-      >>= runCrawler' state . k
-
-    eval (PrintLink elm :>>= k) =
-      printLink' elm
-      >>= runCrawler' state . k
-
 
 currentUrl :: Crawler URI
 currentUrl = Op.singleton CurrentUrl
@@ -143,15 +122,6 @@ click link' = do
   url <- relativeTo (link' ^. href) <$> currentUrl
   Op.singleton $ Get url
 
-printElement :: Xml.Element -> Crawler ()
-printElement = Op.singleton . PrintElement
-
-printForm :: Form -> Crawler ()
-printForm = Op.singleton . PrintForm
-
-printLink :: Link -> Crawler ()
-printLink = Op.singleton . PrintLink
-
 
 -- * State management
 
@@ -160,31 +130,3 @@ getState = Op.singleton GetState
 
 putState :: State -> Crawler ()
 putState = Op.singleton . PutState
-
--- * For debug
-
-printElement' :: MonadIO m => Xml.Element -> m ()
-printElement' x = putStr . toStrict $ x ^. Xml.renderWith (rsPretty .~ True)
-
-printForm' :: MonadIO m => Form -> m ()
-printForm' form = do
-  say $ mconcat
-    [ form ^. dom . name
-    , form ^. domId . to ("#" <>)
-    , form ^. domClass . to ("." <>)
-    ]
-  sayShow $ form ^. action
-  traverse_ sayShow $ Map.toAscList $ form ^. fields
-  -- sayShow' $ form ^. dom
-  say ""
-
-printLink' :: MonadIO m => Link -> m ()
-printLink' link' = do
-  say $ mconcat
-    [ link' ^. dom . name
-    , link' ^. domId . to ("#" <>)
-    , link' ^. domClass . to ("." <>)
-    ]
-  sayShow $ link' ^. href
-  say $ link' ^. innerText
-  -- sayShow' $ link' ^. dom

@@ -18,8 +18,8 @@ run = do
 
   -- runCommand ["put", "--help"]
 
-  -- runCommand ["put", "26", "1000", "2100"]
-  -- runCommand ["delete", "26"]
+  -- runCommand ["put", "12", "1000", "2100"]
+  -- runCommand ["delete", "12"]
   -- runCommand ["put", "2", "1000", "2100", "--holiday-on"]
   -- runCommand ["delete", "2"]
   -- runCommand ["put", "3", "--workday-off"]

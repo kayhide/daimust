@@ -15,9 +15,9 @@ where
 
 import           ClassyPrelude             hiding (many, some)
 
-import           Control.Lens              (at, folding, indices, ix, only, to,
-                                            traversed, universe, view, (&),
-                                            (.~), (?~), (^.), (^..), (^?),
+import           Control.Lens              (at, filtered, folding, indices, ix,
+                                            only, to, traversed, universe, view,
+                                            (&), (.~), (?~), (^.), (^..), (^?),
                                             (^?!), _1, _2, _Just)
 import           Control.Monad.Fail        (MonadFail)
 import           Control.Monad.State       (StateT, evalStateT, get, gets, put)
@@ -35,11 +35,10 @@ import           Text.Xml.Lens
 import           Debug.Trace               as Debug
 
 import           Configurable              (HasConfig, RIO, setting)
-import           Daimust.Crawler           (Crawler, Dom, Response, URI, action,
-                                            dom, fields, forms, frames,
-                                            getState, links, printForm,
-                                            putState, refresh, runCrawler,
-                                            selected, src)
+import           Daimust.Crawler           (Crawler, Dom, Response, action,
+                                            fields, forms, frames, getState,
+                                            links, putState, refresh,
+                                            runCrawler, selected, src)
 import qualified Daimust.Crawler           as Crawler
 import           Daimust.Daim.Config
 import           Daimust.Data.Attendance
@@ -179,7 +178,7 @@ deleteAttendance att = do
   Logger.info $ "Deleting: Attendance #" <> att ^. date
   client' <- runCrawler $ do
     putState state
-    res <- postDelete att page
+    res <- postDelete att =<< postCancel att page
     state' <- getState
     pure Client { basePage = Just res, state = state', .. }
   put client'
@@ -251,13 +250,10 @@ gotoEntrance res = do
   res3 <- do
     let Just src' = lastMay $ res2 ^.. responseBody . html . frames . src
     Crawler.get src'
-  -- traverse_ printLink $ res3 ^.. responseBody . html . links
 
   res4 <- do
     let Just link' = lastMay $ res3 ^.. responseBody . html . links
     Crawler.click link'
-  -- traverse_ Crawler.printLink $ res4 ^.. responseBody . html . links
-  -- traverse_ Crawler.printForm $ res4 ^.. responseBody . html . forms
 
   pure res4
 
@@ -291,30 +287,97 @@ postUpdate att res = do
               & fields . at "pn10s38" ?~ ","
   verifyResponse =<< Crawler.submit form'
 
-postDelete :: Attendance -> Response -> Crawler Response
-postDelete att = predelete' >=> delete'
-  where
-    predelete' res' = do
+
+-- | Cancel is done by the js function:
+--
+-- function dataShoninCancel(an,bn,cn,dn){
+-- 	...
+-- 	document.form01.pn10102.value = "mishonin";
+-- 	document.form01.pn00010.value = an;
+-- 	document.form01.pn00011.value = bn;
+-- 	document.form01.pn10009.value = cn;
+-- 	document.form01.pn00012.value = dn;
+-- 	document.form01.submit();
+-- }
+postCancel :: Attendance -> Response -> Crawler Response
+postCancel att res' = do
+  case params' of
+    Nothing -> pure res'
+    Just (date', b, c, d) -> do
       let form01 = findForm "form01" res'
-      let form02 = findForm "form02" res'
       let form' = form01
-                  & fields . at "pn00010" ?~ att ^. date
-                  & fields . at "pn00011" .~ (form02 ^. fields . at "TEMP_pn00011")
-                  & fields . at "pn00012" ?~ att ^. date <> att ^. enter <> "00"
-                  & fields . at "pn10009" .~ (form02 ^. fields . at "TEMP_pn10009")
+                  & fields . at "pn00010" ?~ date'
+                  & fields . at "pn00011" ?~ b
+                  & fields . at "pn00012" ?~ d
+                  & fields . at "pn10009" ?~ c
                   & fields . at "pn10102" ?~ "mishonin"
       verifyResponse =<< Crawler.submit form'
 
-    delete' res' = do
-      let form01 = findForm "form01" res'
-      let form02 = findForm "form02" res'
-      let form' = form01
-                  & fields . at "pn00010" ?~ att ^. date
-                  & fields . at "pn00011" .~ (form02 ^. fields . at "TEMP_pn00011")
-                  & fields . at "pn00012" ?~ att ^. date <> att ^. enter <> "00"
-                  & fields . at "pn10009" .~ (form02 ^. fields . at "TEMP_pn10009")
-                  & fields . at "pn10102" ?~ "rec_del"
-      verifyResponse =<< Crawler.submit form'
+  where
+    -- | Parser for somethings like:
+    -- "return dataShoninCancel('20190212','SYS0110143000000000001','SYS0110143000000000001','20190212100000')"
+    onclickParser :: Parsec Void Text (Text, Text, Text, Text)
+    onclickParser = do
+      void $ string "return" *> space1
+      void $ string "dataShoninCancel"
+      between (string "(" <* space) (string ")" <* space) $ do
+        [a, b, c, d] <- count 4 $ do
+          x <- between (string "'") (string "'") $
+            pack <$> some (notChar '\'')
+          string "," *> space <|> string "" *> pure ()
+          pure x
+        pure (a, b, c, d)
+
+    params' :: Maybe (Text, Text, Text, Text)
+    params' = do
+      let date' = att ^. date
+      let onclicks' = res' ^.. responseBody . html . selected "font" . node "a" . attr "onClick" . _Just
+      onclicks' ^? traverse . to (parseMaybe onclickParser) . _Just . filtered ((== date') . (^. _1))
+
+
+-- | Delete is done by the js function:
+--
+-- function delAct(dt,frm,shidx,office,alertFlg){
+-- 	...
+-- 	document.form01.pn10102.value = "rec_del";
+-- 	document.form01.pn00010.value = dt;
+-- 	document.form01.PN_DAKOKU_FROM.value = frm;
+-- 	document.form01.pn00012.value = shidx;
+-- 	document.form01.pn00011.value = office;
+-- 	document.form01.submit();
+-- }
+postDelete :: Attendance -> Response -> Crawler Response
+postDelete att res' = do
+  let (date', _, c, d) = params'
+  let form01 = findForm "form01" res'
+  let form' = form01
+              & fields . at "pn00010" ?~ date'
+              & fields . at "pn00011" ?~ d
+              & fields . at "pn00012" ?~ c
+              & fields . at "pn10102" ?~ "rec_del"
+  verifyResponse =<< Crawler.submit form'
+
+  where
+    -- | Parser for somethings like:
+    -- "delAct('20190212','','20190212100000','SYS0110143000000000001','0'); return false;"
+    onclickParser :: Parsec Void Text (Text, Text, Text, Text)
+    onclickParser = do
+      void $ string "delAct"
+      between (string "(" <* space) (string ")" <* many anyChar) $ do
+        [a, b, c, d, _] <- count 5 $ do
+          x <- between (string "'") (string "'") $
+            pack <$> many (notChar '\'')
+          string "," *> space <|> string "" *> pure ()
+          pure x
+        pure (a, b, c, d)
+
+    params' :: (Text, Text, Text, Text)
+    params' = do
+      let date' = att ^. date
+      let onclicks' = res' ^.. responseBody . html . selected "a" . attr "onclick" . _Just
+      let xs = onclicks' ^? traverse . to (parseMaybe onclickParser) . _Just . filtered ((== date') . (^. _1))
+      fromMaybe (date', "", "", "") xs
+
 
 
 gotoPeriod :: Period -> Response -> Crawler Response
