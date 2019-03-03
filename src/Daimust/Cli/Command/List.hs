@@ -9,6 +9,7 @@ import           ClassyPrelude
 
 import           Options.Applicative
 
+import           Daimust.Cli.Utils       (printAttendance)
 import           Daimust.Config          (AppIO)
 import           Daimust.Daim            (headerTexts, listAttendances,
                                           moveToPeriod, runClient)

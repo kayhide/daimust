@@ -18,11 +18,12 @@ import           ClassyPrelude             hiding (many, some)
 import           Control.Lens              (at, folding, indices, ix, only, to,
                                             traversed, universe, view, (&),
                                             (.~), (?~), (^.), (^..), (^?),
-                                            (^?!), _Just)
+                                            (^?!), _1, _2, _Just)
 import           Control.Monad.Fail        (MonadFail)
 import           Control.Monad.State       (StateT, evalStateT, get, gets, put)
 import           Control.Monad.Trans.Maybe (MaybeT (..))
 import           Data.Default              (def)
+import           Data.Void                 (Void)
 import           Network.URI               (URI (..), parseURIReference)
 import           Network.Wreq.Lens         (responseBody)
 import           Path                      (Abs, File, Path, toFilePath)
@@ -277,7 +278,7 @@ postUpdate att res = do
               & fields . at "pn10s08t" ?~ ","
               & fields . at "pn10s09" ?~ att ^. date <> att ^. enter <> ","
               & fields . at "pn10s10" ?~ att ^. leave <> ","
-              & fields . at "pn10s11" ?~ att ^. noteValue <> ","
+              & fields . at "pn10s11" ?~ att ^. attendity . _Just . _1 <> ","
               & fields . at "pn10s14" ?~ ","
               & fields . at "pn10s15" ?~ ","
               & fields . at "pn10s28" ?~ ","
@@ -371,13 +372,19 @@ parseItem period' tr = headMay . catMaybes $ do
     dow' <- cells ^? ix 1
     hours <- cells ^? ix 10
     let (enter', leave') = fromMaybe ("", "") $ parseHours hours
-    let noteValue' = fromMaybe "" $ (tr ^.. selected "td") ^. ix 12 . selected "input" . attr "value"
-    noteLabel' <- cells ^? ix 12
+    let attendity' = do
+          value' <- (tr ^.. selected "td") ^. ix 12 . selected "input" . attr "value"
+          toAttendity value' $ cells ^? ix 12
     color' <- headMay . catMaybes $ tr ^.. selected "td" . attr "bgcolor"
-    flip (parseMaybe @()) comment $ do
+    date' <- parseMaybe dateParser comment
+    pure $ Attendance period' date' day' dow' enter' leave' attendity' color'
+
+  where
+    dateParser :: Parsec Void Text Text
+    dateParser = do
       between (space *> string "ymd[") (string "]" *> space) $ do
         y <- some digitChar <* char '-'
         m <- some digitChar <* char '-'
         d <- some digitChar <* char '-'
         void $ some (notChar ']')
-        pure $ Attendance period' (pack y <> pack m <> pack d) day' dow' enter' leave' noteValue' noteLabel' color'
+        pure $ pack y <> pack m <> pack d

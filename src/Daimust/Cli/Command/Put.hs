@@ -7,7 +7,8 @@ where
 
 import           ClassyPrelude
 
-import           Control.Lens            (filtered, (&), (.~), (^.), (^..))
+import           Control.Lens            (filtered, (&), (.~), (?~), (^.),
+                                          (^..))
 import           Options.Applicative
 
 import           Daimust.Config          (AppIO)
@@ -18,25 +19,36 @@ import           Daimust.Data.Attendance
 import qualified Daimust.Paths           as Paths
 
 
+data AttendityArg =
+  DayOn AttendanceEnter AttendanceLeave Attendity
+  | DayOff Attendity
+  deriving (Eq, Show)
+
 data Args =
   Args
-  { _day       :: Text
-  , _enter     :: AttendanceEnter
-  , _leave     :: AttendanceLeave
-  , _noteValue :: Text
+  { _day          :: Text
+  , _attendityArg :: AttendityArg
   }
   deriving (Show)
 
+dayOnP :: Parser AttendityArg
+dayOnP =
+  DayOn
+  <$> argument str (metavar "ENTER" <> help "Enter time HHMM")
+  <*> argument str (metavar "LEAVE" <> help "Leave time HHMM")
+  <*> flag newWorkdayOn newHolidayOn (long "holiday-on" <> help "Specify holiday")
+
+dayOffP :: Parser AttendityArg
+dayOffP =
+  DayOff
+  <$> flag' newWorkdayOff (long "workday-off" <> help "Specify workday off" )
 
 argsP :: Parser Args
 argsP =
   Args
   <$> argument str (metavar "DAY" <> help "Day to put")
-  <*> argument str (metavar "ENTER" <> help "Enter time HHMM")
-  <*> argument str (metavar "LEAVE" <> help "Leave time HHMM")
-  <*> strOption ( long "note" <> metavar "NOTE" <> value "00" <> showDefault <> help
-                  "`00` for working day, `20` for holiday"
-                )
+  <*> (dayOnP <|> dayOffP)
+
 
 run :: Args -> AppIO ()
 run Args {..} = do
@@ -45,12 +57,14 @@ run Args {..} = do
     maybe (pure ()) moveToPeriod period'
     attendances <- listAttendances
     let att = headMay $ attendances ^.. traverse . filtered ((== _day) . (^. day))
-    maybe (pure ()) (update' _enter _leave _noteValue) att
+    maybe (pure ()) (update' _attendityArg) att
 
-update' :: AttendanceEnter -> AttendanceLeave -> Text -> Attendance -> ClientMonad env ()
-update' enter' leave' noteValue' att =
+update' :: AttendityArg -> Attendance -> ClientMonad env ()
+update' (DayOn enter' leave' attendity') att =
   updateAttendance $ att
   & enter .~ enter'
   & leave .~ leave'
-  & noteValue .~ noteValue'
-
+  & attendity ?~ attendity'
+update' (DayOff attendity') att =
+  updateAttendance $ att
+  & attendity ?~ attendity'

@@ -3,6 +3,7 @@ module Daimust.Data.Attendance
   ( Attendance (..)
   , AttendanceEnter
   , AttendanceLeave
+  , Attendity
   , year
   , month
   , period
@@ -11,27 +12,22 @@ module Daimust.Data.Attendance
   , dow
   , enter
   , leave
-  , noteValue
-  , noteLabel
+  , attendity
   , color
-  , formatAttendance
-  , printAttendance
+  , toAttendity
+  , newWorkdayOn
+  , newHolidayOn
+  , newWorkdayOff
+  , formatAttendity
   , parseHours
   )
 where
 
-import           ClassyPrelude                             hiding (many, some)
+import           ClassyPrelude        hiding (many, some)
 
-import           Control.Lens                              (makeLenses)
-import           Data.List.Split                           (chunksOf)
-import           Data.Text.Prettyprint.Doc                 (pretty, (<+>))
-import qualified Data.Text.Prettyprint.Doc                 as Pretty
-import           Data.Text.Prettyprint.Doc.Render.Terminal (Color (..))
-import qualified Data.Text.Prettyprint.Doc.Render.Terminal as Pretty
-import           Formatting                                (bprint, center,
-                                                            later, left,
-                                                            sformat, stext, (%),
-                                                            (%.))
+import           Control.Lens         (Field1 (..), Field2 (..), lens,
+                                       makeLenses, makePrisms, (^.))
+import           Data.Void            (Void)
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 
@@ -43,6 +39,40 @@ import           Daimust.Data.Period
 type AttendanceEnter = Text
 type AttendanceLeave = Text
 
+
+data Attendity =
+  WorkdayOn Text Text | HolidayOn Text Text | WorkdayOff Text Text
+  deriving (Eq, Show)
+
+makePrisms ''Attendity
+
+instance Field1 Attendity Attendity Text Text where
+  _1 = lens get' set'
+    where
+      get' :: Attendity -> Text
+      get' (WorkdayOn x _)  = x
+      get' (HolidayOn x _)  = x
+      get' (WorkdayOff x _) = x
+
+      set' :: Attendity -> Text -> Attendity
+      set' (WorkdayOn _ y) x  = WorkdayOn x y
+      set' (HolidayOn _ y) x  = HolidayOn x y
+      set' (WorkdayOff _ y) x = WorkdayOff x y
+
+instance Field2 Attendity Attendity Text Text where
+  _2 = lens get' set'
+    where
+      get' :: Attendity -> Text
+      get' (WorkdayOn _ y)  = y
+      get' (HolidayOn _ y)  = y
+      get' (WorkdayOff _ y) = y
+
+      set' :: Attendity -> Text -> Attendity
+      set' (WorkdayOn x _) y  = WorkdayOn x y
+      set' (HolidayOn x _) y  = HolidayOn x y
+      set' (WorkdayOff x _) y = WorkdayOff x y
+
+
 data Attendance =
   Attendance
   { _period    :: Period
@@ -51,8 +81,7 @@ data Attendance =
   , _dow       :: Text
   , _enter     :: AttendanceEnter
   , _leave     :: AttendanceLeave
-  , _noteValue :: Text
-  , _noteLabel :: Text
+  , _attendity :: Maybe Attendity
   , _color     :: Text
   }
   deriving (Eq, Show)
@@ -62,45 +91,37 @@ makeLenses ''Attendance
 
 -- * Helper functions
 
--- | Format attendence data into @Text@.
+-- | Format @Attendity@.
 
-formatAttendance :: Attendance -> Text
-formatAttendance (Attendance _ _ day' dow' enter' leave' noteValue' noteLabel' _) =
-  sformat
-  ( (left 4 ' ' %. stext) %
-    (left 4 ' ' %. stext) %
-    " " % (center 15 ' ' %. (stext % " - " % stext)) %
-    " " % stext %
-    (later (\s -> bool (bprint (" (" % stext % ")") s) "" $ null s))
-  ) day' dow' enter' leave' noteLabel' noteValue'
+toAttendity :: Text -> Maybe Text -> Maybe Attendity
+toAttendity x@"00" y = Just $ WorkdayOn x $ fromMaybe "" y
+toAttendity x@"20" y = Just $ HolidayOn x $ fromMaybe "" y
+toAttendity x@"21" y = Just $ WorkdayOff x $ fromMaybe "" y
+toAttendity _ _      = Nothing
 
+newWorkdayOn :: Attendity
+newWorkdayOn = WorkdayOn "00" ""
 
--- | Pretty prints @Attendance@.
+newHolidayOn :: Attendity
+newHolidayOn = HolidayOn "20" ""
 
-printAttendance :: MonadIO m => Attendance -> m ()
-printAttendance (Attendance _ _ day' dow' enter' leave' noteValue' noteLabel' color') = do
-  let doc = pretty dayCol <+> pretty timeCol <+> Pretty.softline' <+> pretty noteCol
-  let annotate' =
-        case (chunksOf 2 . unpack $ drop 1 $ color') of
-          ["ff", "ff", "ff"] -> id
-          ["ff", "ff", _]    -> Pretty.annotate $ Pretty.color Yellow
-          ["ff", _, "ff"]    -> Pretty.annotate $ Pretty.color Magenta
-          [_, "ff", "ff"]    -> Pretty.annotate $ Pretty.color Cyan
-          ["ff", _, _]       -> Pretty.annotate $ Pretty.color Red
-          [_, "ff", _]       -> Pretty.annotate $ Pretty.color Green
-          [_, _, "ff"]       -> Pretty.annotate $ Pretty.color Blue
-          _                  -> id
-  liftIO $ Pretty.putDoc $ Pretty.indent 2 (annotate' doc) <+> Pretty.line
-  where
-    dayCol = sformat ((left 3 ' ' %. stext) % (left 3 ' ' %. stext)) day' dow'
-    timeCol = sformat ((center 13 ' ' %. (stext % " - " % stext))) enter' leave'
-    noteCol = bool (sformat (stext % " (" % stext % ")") noteLabel' noteValue') "" $ null noteValue'
+newWorkdayOff :: Attendity
+newWorkdayOff = WorkdayOn "21" ""
 
+-- | Format @Attendity@.
+
+formatAttendity :: Attendity -> Text
+formatAttendity x = x ^. _1 <> " (" <> x ^. _2 <> ")"
 
 -- | Parse hours cell @Text@ into enter and leave values.
 
 parseHours :: Text -> Maybe (AttendanceEnter, AttendanceLeave)
-parseHours hours = flip (parseMaybe @()) hours $ do
+parseHours = parseMaybe hoursParser
+
+type Parser = Parsec Void Text
+
+hoursParser :: Parser (AttendanceEnter, AttendanceLeave)
+hoursParser = do
   hour1 <- some digitChar <* char ':'
   min1 <- some digitChar
   void $ space *> char '-' <* space
