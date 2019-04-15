@@ -5,16 +5,15 @@ module Daimust.Cli.Command.Delete
   )
 where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Control.Lens            (filtered, (^.), (^..))
-import           Options.Applicative
+import Control.Lens (filtered, (^.), (^..))
+import Options.Applicative
 
-import           Daimust.Config          (AppIO)
-import           Daimust.Daim            (deleteAttendance, listAttendances,
-                                          moveToPeriod, runClient)
-import           Daimust.Data.Attendance
-import           Daimust.Paths           (lookupFocus)
+import Daimust.Config (AppIO)
+import Daimust.Daim (deleteAttendance, listAttendances, moveToPeriod, runClient)
+import Daimust.Data.Attendance
+import Daimust.Paths (lookupFocus)
 
 
 data Args =

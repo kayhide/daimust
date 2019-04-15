@@ -14,23 +14,22 @@ module Daimust.Crawler.Monad
   )
 where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Control.Lens              (to, (^.))
-import           Control.Monad.Fail        (MonadFail)
-import qualified Control.Monad.Fail        as Fail
-import           Control.Monad.Operational (Program, ProgramView,
-                                            ProgramViewT (..))
+import Control.Lens (to, (^.))
+import Control.Monad.Fail (MonadFail)
+import qualified Control.Monad.Fail as Fail
+import Control.Monad.Operational (Program, ProgramView, ProgramViewT (..))
 import qualified Control.Monad.Operational as Op
-import qualified Data.Map                  as Map
-import           Network.HTTP.Client       (getUri)
-import           Network.URI
-import           Network.Wreq              (FormParam (..), defaults)
-import           Network.Wreq.Lens         (hrFinalRequest, hrFinalResponse)
-import qualified Network.Wreq.Session      as Session
+import qualified Data.Map as Map
+import Network.HTTP.Client (getUri)
+import Network.URI
+import Network.Wreq (FormParam (..), defaults)
+import Network.Wreq.Lens (hrFinalRequest, hrFinalResponse)
+import qualified Network.Wreq.Session as Session
 
-import           Daimust.Crawler.State     (State (..), dumpState, restoreState)
-import           Daimust.Crawler.Type
+import Daimust.Crawler.State (State (..), dumpState, restoreState)
+import Daimust.Crawler.Type
 
 
 data CrawlerI a where

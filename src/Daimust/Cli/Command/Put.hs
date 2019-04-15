@@ -5,18 +5,16 @@ module Daimust.Cli.Command.Put
   )
 where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Control.Lens            (filtered, (&), (.~), (?~), (^.),
-                                          (^..))
-import           Options.Applicative
+import Control.Lens (filtered, (&), (.~), (?~), (^.), (^..))
+import Options.Applicative
 
-import           Daimust.Config          (AppIO)
-import           Daimust.Daim            (ClientMonad, listAttendances,
-                                          moveToPeriod, runClient,
-                                          updateAttendance)
-import           Daimust.Data.Attendance
-import qualified Daimust.Paths           as Paths
+import Daimust.Config (AppIO)
+import Daimust.Daim (ClientMonad, listAttendances, moveToPeriod, runClient,
+                     updateAttendance)
+import Daimust.Data.Attendance
+import qualified Daimust.Paths as Paths
 
 
 data AttendityArg =

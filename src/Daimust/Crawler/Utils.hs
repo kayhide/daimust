@@ -5,14 +5,14 @@ module Daimust.Crawler.Utils
   )
 where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Control.Lens              (to, (.~), (^.))
-import qualified Data.Map                  as Map
-import           Text.Xml.Lens             as Xml
+import Control.Lens (to, (.~), (^.))
+import qualified Data.Map as Map
+import Text.Xml.Lens as Xml
 
-import           Daimust.Crawler.Lens
-import           Daimust.Crawler.Type
+import Daimust.Crawler.Lens
+import Daimust.Crawler.Type
 
 
 -- * Formmatting dom element

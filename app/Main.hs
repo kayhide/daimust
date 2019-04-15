@@ -2,9 +2,9 @@ module Main
   (main)
 where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import qualified Daimust.Cli   as Cli
+import qualified Daimust.Cli as Cli
 
 
 main :: IO ()

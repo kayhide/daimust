@@ -5,7 +5,7 @@ steps:
       records: true
 
   - imports:
-      align: global
+      align: none
       list_align: after_alias
       pad_module_names: true
       long_list_align: inline
@@ -16,7 +16,7 @@ steps:
 
   - language_pragmas:
       style: vertical
-      align: true
+      align: false
       remove_redundant: true
 
   - trailing_whitespace: {}

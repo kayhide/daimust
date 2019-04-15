@@ -1,19 +1,16 @@
 module Daimust.Crawler.Lens
 where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Control.Lens                (Fold, Prism', filtered, folded,
-                                              folding, ix, only, prism, to,
-                                              universe, view, (^.), (^..), (^?),
-                                              _Just)
-import qualified Data.Map                    as Map
-import           Network.URI
-import           Text.Xml.Lens               (attr, attributed, html, name,
-                                              named, text)
+import Control.Lens (Fold, Prism', filtered, folded, folding, ix, only, prism,
+                     to, universe, view, (^.), (^..), (^?), _Just)
+import qualified Data.Map as Map
+import Network.URI
+import Text.Xml.Lens (attr, attributed, html, name, named, text)
 
-import           Daimust.Crawler.DomSelector
-import           Daimust.Crawler.Type
+import Daimust.Crawler.DomSelector
+import Daimust.Crawler.Type
 
 
 _URI :: Prism' Text URI

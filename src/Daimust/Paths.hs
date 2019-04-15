@@ -7,16 +7,15 @@ module Daimust.Paths
   )
 where
 
-import           ClassyPrelude        hiding ((</>))
+import ClassyPrelude hiding ((</>))
 
-import           Control.Lens         (view)
-import           Path                 (Abs, Dir, File, Path, toFilePath, (</>))
-import           Path.IO              (doesFileExist, removeFile)
+import Control.Lens (view)
+import Path (Abs, Dir, File, Path, toFilePath, (</>))
+import Path.IO (doesFileExist, removeFile)
 
-import           Configurable         (HasConfig, RIO, setting)
-import           Daimust.Data.Period  (Period (..), formatPeriod,
-                                       parsePeriodMaybe)
-import           Daimust.Paths.Config
+import Configurable (HasConfig, RIO, setting)
+import Daimust.Data.Period (Period (..), formatPeriod, parsePeriodMaybe)
+import Daimust.Paths.Config
 
 -- * Cli util functions
 

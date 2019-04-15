@@ -4,9 +4,9 @@ module Daimust.Cli.Common
   )
 where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Options.Applicative
+import Options.Applicative
 
 
 data Args =

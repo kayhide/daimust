@@ -5,13 +5,12 @@ module Daimust.Crawler.State
   )
 where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import qualified Data.Binary             as Binary
-import           Network.HTTP.Client.TLS (tlsManagerSettings)
-import           Network.URI
-import           Network.Wreq.Session    (Session, getSessionCookieJar,
-                                          newSessionControl)
+import qualified Data.Binary as Binary
+import Network.HTTP.Client.TLS (tlsManagerSettings)
+import Network.URI
+import Network.Wreq.Session (Session, getSessionCookieJar, newSessionControl)
 
 
 data State =

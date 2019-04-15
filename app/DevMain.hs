@@ -1,15 +1,15 @@
 module DevMain
 where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Path               (toFilePath)
-import           System.Environment (withArgs)
+import Path (toFilePath)
+import System.Environment (withArgs)
 
-import qualified Daimust.Cli        as Cli
-import           Daimust.Config     (runApp)
-import qualified Daimust.Crawler    as Crawler
-import qualified Daimust.Paths      as Paths
+import qualified Daimust.Cli as Cli
+import Daimust.Config (runApp)
+import qualified Daimust.Crawler as Crawler
+import qualified Daimust.Paths as Paths
 
 
 run :: IO ()

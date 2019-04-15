@@ -1,17 +1,16 @@
-{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Plugin.Logger.Config where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Control.Lens.TH      (makeFieldsNoPrefix)
-import           Control.Monad.Logger
+import Control.Lens.TH (makeFieldsNoPrefix)
+import Control.Monad.Logger
 
-import           Configurable         (Configurable (..), FetchSetting,
-                                       fetchSetting)
-import           System.Console.ANSI
-import           System.Environment   (lookupEnv)
+import Configurable (Configurable (..), FetchSetting, fetchSetting)
+import System.Console.ANSI
+import System.Environment (lookupEnv)
 
 
 data LoggerConfig
@@ -87,8 +86,8 @@ instance Configurable LoggerConfig where
 
 
 colorOf :: LogLevel -> [SGR]
-colorOf LevelDebug = [SetColor Foreground Dull Green]
-colorOf LevelInfo = [SetColor Foreground Dull Blue]
-colorOf LevelWarn = [SetColor Foreground Dull Yellow]
-colorOf LevelError = [SetColor Foreground Dull Red]
+colorOf LevelDebug     = [SetColor Foreground Dull Green]
+colorOf LevelInfo      = [SetColor Foreground Dull Blue]
+colorOf LevelWarn      = [SetColor Foreground Dull Yellow]
+colorOf LevelError     = [SetColor Foreground Dull Red]
 colorOf (LevelOther _) = [SetColor Foreground Dull Magenta]

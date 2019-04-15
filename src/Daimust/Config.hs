@@ -1,14 +1,14 @@
 module Daimust.Config where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Data.Extensible       (nil, shrink)
-import           Data.Extensible.Plain (AllOf)
+import Data.Extensible (nil, shrink)
+import Data.Extensible.Plain (AllOf)
 
-import           Configurable          (RIO, ToConfigs, activate)
-import           Daimust.Daim.Config   (DaimConfig)
-import           Daimust.Paths.Config  (PathsConfig)
-import           Plugin.Logger.Config  (LoggerConfig)
+import Configurable (RIO, ToConfigs, activate)
+import Daimust.Daim.Config (DaimConfig)
+import Daimust.Paths.Config (PathsConfig)
+import Plugin.Logger.Config (LoggerConfig)
 
 
 type AppConfig = AllOf (ToConfigs

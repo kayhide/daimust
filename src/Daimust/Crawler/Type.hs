@@ -25,13 +25,13 @@ module Daimust.Crawler.Type
   )
 where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Control.Lens         (makeFields)
+import Control.Lens (makeFields)
 import qualified Data.ByteString.Lazy as BL
-import           Network.URI          (URI)
-import qualified Network.Wreq         as Wreq
-import qualified Text.Xml.Lens        as Xml
+import Network.URI (URI)
+import qualified Network.Wreq as Wreq
+import qualified Text.Xml.Lens as Xml
 
 
 type Response = Wreq.Response BL.ByteString

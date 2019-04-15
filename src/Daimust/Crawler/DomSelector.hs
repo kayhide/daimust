@@ -1,11 +1,11 @@
 module Daimust.Crawler.DomSelector
 where
 
-import           ClassyPrelude        hiding (many, some)
+import ClassyPrelude hiding (many, some)
 
-import           Data.Void            (Void)
-import           Text.Megaparsec
-import           Text.Megaparsec.Char
+import Data.Void (Void)
+import Text.Megaparsec
+import Text.Megaparsec.Char
 
 
 data DomFactor = DomName Text | DomId Text | DomClass Text

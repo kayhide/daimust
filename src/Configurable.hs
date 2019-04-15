@@ -1,18 +1,18 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE TypeOperators          #-}
-{-# LANGUAGE UndecidableInstances   #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Configurable where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Control.Lens          (Lens')
-import           Data.Extensible       (Forall, Member (..), item)
-import           Data.Extensible.Plain (AllOf, (<%))
-import           Data.Proxy            (Proxy (..))
-import           Network.URI           (URI, parseURI)
-import           Path                  (Abs, Dir, File, Path, Rel, parseAbsDir,
-                                        parseAbsFile, parseRelDir, parseRelFile)
-import           System.Environment    (lookupEnv)
+import Control.Lens (Lens')
+import Data.Extensible (Forall, Member (..), item)
+import Data.Extensible.Plain (AllOf, (<%))
+import Data.Proxy (Proxy (..))
+import Network.URI (URI, parseURI)
+import Path (Abs, Dir, File, Path, Rel, parseAbsDir, parseAbsFile, parseRelDir,
+             parseRelFile)
+import System.Environment (lookupEnv)
 
 
 type RIO env = ReaderT env IO

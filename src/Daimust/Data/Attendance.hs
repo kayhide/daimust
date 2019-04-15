@@ -23,15 +23,15 @@ module Daimust.Data.Attendance
   )
 where
 
-import           ClassyPrelude        hiding (many, some)
+import ClassyPrelude hiding (many, some)
 
-import           Control.Lens         (Field1 (..), Field2 (..), lens,
-                                       makeLenses, makePrisms, (^.))
-import           Data.Void            (Void)
-import           Text.Megaparsec
-import           Text.Megaparsec.Char
+import Control.Lens (Field1 (..), Field2 (..), lens, makeLenses, makePrisms,
+                     (^.))
+import Data.Void (Void)
+import Text.Megaparsec
+import Text.Megaparsec.Char
 
-import           Daimust.Data.Period
+import Daimust.Data.Period
 
 
 -- * Data types

@@ -13,41 +13,39 @@ module Daimust.Daim
   )
 where
 
-import           ClassyPrelude             hiding (many, some)
+import ClassyPrelude hiding (many, some)
 
-import           Control.Lens              (at, filtered, folding, indices, ix,
-                                            only, to, traversed, universe, view,
-                                            (&), (.~), (?~), (^.), (^..), (^?),
-                                            (^?!), _1, _2, _Just)
-import           Control.Monad.Fail        (MonadFail)
-import           Control.Monad.State       (StateT, evalStateT, get, gets, put)
-import           Control.Monad.Trans.Maybe (MaybeT (..))
-import           Data.Default              (def)
-import           Data.Void                 (Void)
-import           Network.URI               (URI (..), parseURIReference)
-import           Network.Wreq.Lens         (responseBody)
-import           Path                      (Abs, File, Path, toFilePath)
-import           Path.IO                   (doesFileExist)
-import           Text.Megaparsec
-import           Text.Megaparsec.Char
-import           Text.Xml.Lens
+import Control.Lens (at, filtered, folding, indices, ix, only, to, traversed,
+                     universe, view, (&), (.~), (?~), (^.), (^..), (^?), (^?!),
+                     _1, _2, _Just)
+import Control.Monad.Fail (MonadFail)
+import Control.Monad.State (StateT, evalStateT, get, gets, put)
+import Control.Monad.Trans.Maybe (MaybeT (..))
+import Data.Default (def)
+import Data.Void (Void)
+import Network.URI (URI (..), parseURIReference)
+import Network.Wreq.Lens (responseBody)
+import Path (Abs, File, Path, toFilePath)
+import Path.IO (doesFileExist)
+import Text.Megaparsec
+import Text.Megaparsec.Char
+import Text.Xml.Lens
 
-import           Debug.Trace               as Debug
+import Debug.Trace as Debug
 
-import           Configurable              (HasConfig, RIO, setting)
-import           Daimust.Crawler           (Crawler, Dom, Response, action,
-                                            fields, forms, frames, getState,
-                                            links, putState, refresh,
-                                            runCrawler, selected, src)
-import qualified Daimust.Crawler           as Crawler
-import           Daimust.Daim.Config
-import           Daimust.Data.Attendance
-import           Daimust.Data.Period
-import           Daimust.Display
-import qualified Daimust.Paths             as Paths
-import           Daimust.Paths.Config      (PathsConfig)
-import qualified Plugin.Logger             as Logger
-import           Plugin.Logger.Config      (LoggerConfig)
+import Configurable (HasConfig, RIO, setting)
+import Daimust.Crawler (Crawler, Dom, Response, action, fields, forms, frames,
+                        getState, links, putState, refresh, runCrawler,
+                        selected, src)
+import qualified Daimust.Crawler as Crawler
+import Daimust.Daim.Config
+import Daimust.Data.Attendance
+import Daimust.Data.Period
+import Daimust.Display
+import qualified Daimust.Paths as Paths
+import Daimust.Paths.Config (PathsConfig)
+import qualified Plugin.Logger as Logger
+import Plugin.Logger.Config (LoggerConfig)
 
 
 -- * Table config

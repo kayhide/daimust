@@ -2,18 +2,18 @@ module Daimust.Cli
   (run)
 where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Options.Applicative
-import           System.Environment         (setEnv)
+import Options.Applicative
+import System.Environment (setEnv)
 
 import qualified Daimust.Cli.Command.Delete as Delete
-import qualified Daimust.Cli.Command.Focus  as Focus
-import qualified Daimust.Cli.Command.Hist   as Hist
-import qualified Daimust.Cli.Command.List   as List
-import qualified Daimust.Cli.Command.Put    as Put
-import qualified Daimust.Cli.Common         as Common
-import           Daimust.Config             (AppIO, runApp)
+import qualified Daimust.Cli.Command.Focus as Focus
+import qualified Daimust.Cli.Command.Hist as Hist
+import qualified Daimust.Cli.Command.List as List
+import qualified Daimust.Cli.Command.Put as Put
+import qualified Daimust.Cli.Common as Common
+import Daimust.Config (AppIO, runApp)
 
 
 data CommandArgs where

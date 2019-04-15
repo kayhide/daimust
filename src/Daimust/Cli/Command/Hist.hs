@@ -5,12 +5,12 @@ module Daimust.Cli.Command.Hist
   )
 where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Options.Applicative
+import Options.Applicative
 
-import           Daimust.Config      (AppIO)
-import qualified Daimust.Histfile    as Histfile
+import Daimust.Config (AppIO)
+import qualified Daimust.Histfile as Histfile
 
 
 data Args = Args

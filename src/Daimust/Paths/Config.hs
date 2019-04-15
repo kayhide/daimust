@@ -1,20 +1,18 @@
-{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Daimust.Paths.Config where
 
-import           ClassyPrelude        hiding ((</>))
+import ClassyPrelude hiding ((</>))
 
-import           Control.Lens.TH      (makeFieldsNoPrefix)
-import           Network.URI          (URI, parseURI)
-import           Path                 (Abs, Dir, File, Path, Rel, mkRelDir,
-                                       mkRelFile, parseAbsDir, toFilePath,
-                                       (</>))
-import           Path.IO              (doesFileExist, ensureDir, getHomeDir,
-                                       removeFile)
+import Control.Lens.TH (makeFieldsNoPrefix)
+import Network.URI (URI, parseURI)
+import Path (Abs, Dir, File, Path, Rel, mkRelDir, mkRelFile, parseAbsDir,
+             toFilePath, (</>))
+import Path.IO (doesFileExist, ensureDir, getHomeDir, removeFile)
 
-import           Configurable         (Configurable (..), fetchSetting)
-import           Plugin.Logger.Config (LoggerConfig)
+import Configurable (Configurable (..), fetchSetting)
+import Plugin.Logger.Config (LoggerConfig)
 
 
 data PathsConfig

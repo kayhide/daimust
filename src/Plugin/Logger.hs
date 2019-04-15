@@ -7,13 +7,13 @@ module Plugin.Logger
   )
 where
 
-import           ClassyPrelude        hiding (error)
+import ClassyPrelude hiding (error)
 
-import           Control.Lens         (view)
-import           Control.Monad.Logger (LogLevel (..))
+import Control.Lens (view)
+import Control.Monad.Logger (LogLevel (..))
 
-import           Configurable         (HasConfig (..))
-import           Plugin.Logger.Config
+import Configurable (HasConfig (..))
+import Plugin.Logger.Config
 
 
 type Config = LoggerConfig

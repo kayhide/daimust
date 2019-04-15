@@ -5,16 +5,14 @@ module Daimust.Cli.Command.List
   )
 where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Options.Applicative
+import Options.Applicative
 
-import           Daimust.Cli.Utils       (printAttendance)
-import           Daimust.Config          (AppIO)
-import           Daimust.Daim            (headerTexts, listAttendances,
-                                          moveToPeriod, runClient)
-import           Daimust.Data.Attendance
-import           Daimust.Paths           (lookupFocus)
+import Daimust.Cli.Utils (printAttendance)
+import Daimust.Config (AppIO)
+import Daimust.Daim (headerTexts, listAttendances, moveToPeriod, runClient)
+import Daimust.Paths (lookupFocus)
 
 
 data Args = Args

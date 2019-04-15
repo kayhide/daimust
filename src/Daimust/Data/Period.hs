@@ -9,13 +9,13 @@ module Daimust.Data.Period
   )
 where
 
-import           ClassyPrelude        hiding (many, some)
+import ClassyPrelude hiding (many, some)
 
-import           Control.Lens         (makeLenses)
-import           Data.Void            (Void)
-import           Formatting           (int, left, sformat, (%), (%.))
-import           Text.Megaparsec      (Parsec, count, many, parseMaybe)
-import           Text.Megaparsec.Char (char, digitChar)
+import Control.Lens (makeLenses)
+import Data.Void (Void)
+import Formatting (int, left, sformat, (%), (%.))
+import Text.Megaparsec (Parsec, count, many, parseMaybe)
+import Text.Megaparsec.Char (char, digitChar)
 
 
 -- * Data types

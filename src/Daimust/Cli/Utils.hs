@@ -1,17 +1,15 @@
 module Daimust.Cli.Utils where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Data.List.Split                           (chunksOf)
-import           Data.Text.Prettyprint.Doc                 (pretty, (<+>))
-import qualified Data.Text.Prettyprint.Doc                 as Pretty
-import           Data.Text.Prettyprint.Doc.Render.Terminal (Color (..))
+import Data.List.Split (chunksOf)
+import Data.Text.Prettyprint.Doc (pretty, (<+>))
+import qualified Data.Text.Prettyprint.Doc as Pretty
+import Data.Text.Prettyprint.Doc.Render.Terminal (Color (..))
 import qualified Data.Text.Prettyprint.Doc.Render.Terminal as Pretty
-import           Formatting                                (center, left,
-                                                            sformat, stext, (%),
-                                                            (%.))
+import Formatting (center, left, sformat, stext, (%), (%.))
 
-import           Daimust.Data.Attendance
+import Daimust.Data.Attendance
 
 
 -- | Pretty prints @Attendance@.

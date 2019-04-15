@@ -1,15 +1,15 @@
-{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Daimust.Daim.Config where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Control.Lens.TH      (makeFieldsNoPrefix)
-import           Network.URI          (URI, parseURI)
+import Control.Lens.TH (makeFieldsNoPrefix)
+import Network.URI (URI, parseURI)
 
-import           Configurable         (Configurable (..), fetchSetting)
-import           Plugin.Logger.Config (LoggerConfig)
+import Configurable (Configurable (..), fetchSetting)
+import Plugin.Logger.Config (LoggerConfig)
 
 
 data DaimConfig

@@ -1,10 +1,10 @@
 module Daimust.Display
 where
 
-import           ClassyPrelude
+import ClassyPrelude
 
-import           Control.Lens
-import           Data.Default   (Default, def)
+import Control.Lens
+import Data.Default (Default, def)
 
 
 type Row = [Text]

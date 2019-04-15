@@ -7,24 +7,22 @@ module Daimust.Histfile
 where
 
 
-import           ClassyPrelude              hiding (some, (</>))
+import ClassyPrelude hiding (some, (</>))
 
-import           Control.Lens               (to, (^.), (^..), _1, _2)
-import           Data.Map                   (Map)
-import qualified Data.Map                   as Map
-import           Data.Semigroup             (Max (..), Min (..), getMax, getMin)
-import           Data.Time.Clock.POSIX      (posixSecondsToUTCTime)
-import           Data.Time.Lens
-import           Data.Time.LocalTime        (LocalTime, TimeOfDay,
-                                             getCurrentTimeZone)
-import           Data.Void                  (Void)
-import           Path                       (Abs, File, Path, mkRelFile,
-                                             parseAbsFile, toFilePath, (</>))
-import           Path.IO                    (getHomeDir)
-import           System.Environment         (lookupEnv)
-import           Text.Megaparsec            (Parsec, parseMaybe, some, takeRest)
-import           Text.Megaparsec.Char       (char, digitChar, space)
-import           Text.Megaparsec.Char.Lexer (decimal)
+import Control.Lens (to, (^.), (^..), _1, _2)
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Semigroup (Max (..), Min (..), getMax, getMin)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Time.Lens
+import Data.Time.LocalTime (LocalTime, TimeOfDay, getCurrentTimeZone)
+import Data.Void (Void)
+import Path (Abs, File, Path, mkRelFile, parseAbsFile, toFilePath, (</>))
+import Path.IO (getHomeDir)
+import System.Environment (lookupEnv)
+import Text.Megaparsec (Parsec, parseMaybe, some, takeRest)
+import Text.Megaparsec.Char (char, digitChar, space)
+import Text.Megaparsec.Char.Lexer (decimal)
 
 -- | Data types
 
