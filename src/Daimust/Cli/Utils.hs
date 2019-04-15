@@ -8,6 +8,7 @@ import qualified Data.Text.Prettyprint.Doc as Pretty
 import Data.Text.Prettyprint.Doc.Render.Terminal (Color (..))
 import qualified Data.Text.Prettyprint.Doc.Render.Terminal as Pretty
 import Formatting (center, left, sformat, stext, (%), (%.))
+import Formatting.Time (hm)
 
 import Daimust.Data.Attendance
 
@@ -30,5 +31,9 @@ printAttendance (Attendance _ _ day' dow' enter' leave' attendity' color') = do
   liftIO $ Pretty.putDoc $ Pretty.indent 2 (annotate' doc) <+> Pretty.line
   where
     dayCol = sformat ((left 3 ' ' %. stext) % (left 3 ' ' %. stext)) day' dow'
-    timeCol = sformat (center 13 ' ' %. (stext % " - " % stext)) enter' leave'
+    timeCol = case (enter', leave') of
+      (Just enter'', Just leave'') ->
+        sformat (center 15 ' ' %. (hm % " - " % hm)) enter'' leave''
+      _ ->
+        replicate 15 ' '
     noteCol = maybe "" formatAttendity attendity'

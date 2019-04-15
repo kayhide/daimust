@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Daimust.Data.Attendance
   ( Attendance (..)
-  , AttendanceEnter
-  , AttendanceLeave
+  , AttendanceEnter (..)
+  , AttendanceLeave (..)
   , Attendity
   , year
   , month
@@ -20,25 +20,27 @@ module Daimust.Data.Attendance
   , newWorkdayOff
   , formatAttendity
   , parseHours
+  , todParser
   )
 where
 
-import ClassyPrelude hiding (many, some)
+import ClassyPrelude hiding (many, some, try)
 
 import Control.Lens (Field1 (..), Field2 (..), lens, makeLenses, makePrisms,
                      (^.))
+import Data.Time.LocalTime (TimeOfDay (..))
 import Data.Void (Void)
 import Text.Megaparsec
 import Text.Megaparsec.Char
+import qualified Text.Megaparsec.Char.Lexer as L
 
 import Daimust.Data.Period
 
 
 -- * Data types
 
-type AttendanceEnter = Text
-type AttendanceLeave = Text
-
+type AttendanceEnter = TimeOfDay
+type AttendanceLeave = TimeOfDay
 
 data Attendity =
   WorkdayOn Text Text | HolidayOn Text Text | WorkdayOff Text Text
@@ -79,8 +81,8 @@ data Attendance =
   , _date      :: Text
   , _day       :: Text
   , _dow       :: Text
-  , _enter     :: AttendanceEnter
-  , _leave     :: AttendanceLeave
+  , _enter     :: Maybe AttendanceEnter
+  , _leave     :: Maybe AttendanceLeave
   , _attendity :: Maybe Attendity
   , _color     :: Text
   }
@@ -122,9 +124,26 @@ type Parser = Parsec Void Text
 
 hoursParser :: Parser (AttendanceEnter, AttendanceLeave)
 hoursParser = do
-  hour1 <- some digitChar <* char ':'
-  min1 <- some digitChar
+  tod1 <- todParser
   void $ space *> char '-' <* space
-  hour2 <- some digitChar <* char ':'
-  min2 <- some digitChar
-  pure (pack (hour1 <> min1), pack (hour2 <> min2))
+  tod2 <- todParser
+  pure (tod1, tod2)
+
+todParser :: Parser TimeOfDay
+todParser = try coloned <|> decimal4
+  where
+    coloned :: Parser TimeOfDay
+    coloned = do
+      hour' <- L.decimal <?> "hour"
+      void $ char ':'
+      min' <- L.decimal <?> "minute"
+      sec' :: Int <- try (char ':' *> L.decimal) <|> pure 0
+      pure $ TimeOfDay hour' min' (fromRational $ toRational sec')
+
+    decimal4 :: Parser TimeOfDay
+    decimal4 = do
+      hour' :: Text <- pack <$> count 2 digitChar
+      let Just hour'' = readMay hour'
+      min' :: Text <- pack <$> count 2 digitChar
+      let Just min'' = readMay min'
+      pure $ TimeOfDay hour'' min'' 0

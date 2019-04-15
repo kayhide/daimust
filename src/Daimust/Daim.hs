@@ -23,6 +23,8 @@ import Control.Monad.State (StateT, evalStateT, get, gets, put)
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.Default (def)
 import Data.Void (Void)
+import Formatting (sformat, (%))
+import Formatting.Time (hour24, minute)
 import Network.URI (URI (..), parseURIReference)
 import Network.Wreq.Lens (responseBody)
 import Path (Abs, File, Path, toFilePath)
@@ -257,6 +259,12 @@ gotoEntrance res = do
 
 postUpdate :: Attendance -> Response -> Crawler Response
 postUpdate att res = do
+  let enter' = case att ^. enter of
+        Nothing -> ""
+        Just tod -> att ^. date <> sformat (hour24 % minute) tod tod
+  let leave' = case att ^. leave of
+        Nothing -> ""
+        Just tod -> sformat (hour24 % minute) tod tod
   let form02 = findForm "form02" res
   let form' = form02
               & fields . at "pn10s01" ?~ att ^. date <> ","
@@ -270,8 +278,8 @@ postUpdate att res = do
               & fields . at "pn10s07t" ?~ ","
               & fields . at "pn10s08" ?~ ","
               & fields . at "pn10s08t" ?~ ","
-              & fields . at "pn10s09" ?~ att ^. date <> att ^. enter <> ","
-              & fields . at "pn10s10" ?~ att ^. leave <> ","
+              & fields . at "pn10s09" ?~ enter' <> ","
+              & fields . at "pn10s10" ?~ leave' <> ","
               & fields . at "pn10s11" ?~ att ^. attendity . _Just . _1 <> ","
               & fields . at "pn10s14" ?~ ","
               & fields . at "pn10s15" ?~ ","
@@ -432,7 +440,7 @@ parseItem period' tr = headMay . catMaybes $ do
     day' <- cells ^? ix 0
     dow' <- cells ^? ix 1
     hours <- cells ^? ix 10
-    let (enter', leave') = fromMaybe ("", "") $ parseHours hours
+    let (enter', leave') = maybe (Nothing, Nothing) (Just *** Just) $ parseHours hours
     let attendity' = do
           value' <- (tr ^.. selected "td") ^. ix 12 . selected "input" . attr "value"
           toAttendity value' $ cells ^? ix 12
