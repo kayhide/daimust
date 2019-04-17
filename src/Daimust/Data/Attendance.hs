@@ -8,7 +8,6 @@ module Daimust.Data.Attendance
   , month
   , period
   , date
-  , day
   , dow
   , enter
   , leave
@@ -79,7 +78,6 @@ data Attendance =
   Attendance
   { _period    :: Period
   , _date      :: Day
-  , _day       :: Text
   , _dow       :: Text
   , _enter     :: Maybe AttendanceEnter
   , _leave     :: Maybe AttendanceLeave

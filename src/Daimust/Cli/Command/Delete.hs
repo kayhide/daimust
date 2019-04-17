@@ -7,7 +7,8 @@ where
 
 import ClassyPrelude
 
-import Control.Lens (filtered, (^.), (^..))
+import Control.Lens (filtered, (^.), (^?))
+import Data.Time.Lens (days)
 import Options.Applicative
 
 import Daimust.Config (AppIO)
@@ -18,7 +19,7 @@ import Daimust.Paths (lookupFocus)
 
 data Args =
   Args
-  { _day     :: Text
+  { _day :: Int
   }
   deriving (Show)
 
@@ -26,7 +27,7 @@ data Args =
 argsP :: Parser Args
 argsP =
   Args
-  <$> argument str (metavar "DAY" <> help "Day to delete")
+  <$> argument auto (metavar "DAY" <> help "Day to delete")
 
 run :: Args -> AppIO ()
 run Args {..} = do
@@ -34,6 +35,6 @@ run Args {..} = do
   runClient $ do
     maybe (pure ()) moveToPeriod period'
     attendances <- listAttendances
-    let att = headMay $ attendances ^.. traverse . filtered ((== _day) . (^. day))
+    let att = attendances ^? traverse . filtered ((== _day) . (^. date . days))
     maybe (pure ()) deleteAttendance att
 

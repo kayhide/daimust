@@ -450,7 +450,6 @@ parseItem period' tr = headMay . catMaybes $ do
   comment <- tr ^.. selected "" . comments
   pure $ do
     let cells = rowTexts tr
-    day' <- cells ^? ix 0
     dow' <- cells ^? ix 1
     hours <- cells ^? ix 10
     let (enter', leave') = maybe (Nothing, Nothing) (Just *** Just) $ parseHours hours
@@ -459,7 +458,7 @@ parseItem period' tr = headMay . catMaybes $ do
           toAttendity value' $ cells ^? ix 12
     color' <- headMay . catMaybes $ tr ^.. selected "td" . attr "bgcolor"
     date' <- parseMaybe dateParser comment
-    pure $ Attendance period' date' day' dow' enter' leave' attendity' color'
+    pure $ Attendance period' date' dow' enter' leave' attendity' color'
 
   where
     dateParser :: Parsec Void Text Day

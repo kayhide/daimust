@@ -8,7 +8,7 @@ import qualified Data.Text.Prettyprint.Doc as Pretty
 import Data.Text.Prettyprint.Doc.Render.Terminal (Color (..))
 import qualified Data.Text.Prettyprint.Doc.Render.Terminal as Pretty
 import Formatting (center, left, sformat, stext, (%), (%.))
-import Formatting.Time (hm)
+import Formatting.Time (hm, dayOfMonthS)
 
 import Daimust.Data.Attendance
 
@@ -16,7 +16,7 @@ import Daimust.Data.Attendance
 -- | Pretty prints @Attendance@.
 
 printAttendance :: MonadIO m => Attendance -> m ()
-printAttendance (Attendance _ _ day' dow' enter' leave' attendity' color') = do
+printAttendance (Attendance _ date' dow' enter' leave' attendity' color') = do
   let doc = pretty dayCol <+> pretty timeCol <+> Pretty.softline' <+> pretty noteCol
   let annotate' =
         case chunksOf 2 . unpack $ drop 1 color' of
@@ -30,7 +30,7 @@ printAttendance (Attendance _ _ day' dow' enter' leave' attendity' color') = do
           _                  -> id
   liftIO $ Pretty.putDoc $ Pretty.indent 2 (annotate' doc) <+> Pretty.line
   where
-    dayCol = sformat ((left 3 ' ' %. stext) % (left 3 ' ' %. stext)) day' dow'
+    dayCol = sformat ((left 3 ' ' %. dayOfMonthS) % (left 3 ' ' %. stext)) date' dow'
     timeCol = case (enter', leave') of
       (Just enter'', Just leave'') ->
         sformat (center 15 ' ' %. (hm % " - " % hm)) enter'' leave''
