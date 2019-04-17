@@ -15,6 +15,7 @@ import Daimust.Daim (ClientMonad, listAttendances, moveToPeriod, runClient,
                      updateAttendance)
 import Daimust.Data.Attendance
 import qualified Daimust.Paths as Paths
+import Text.Megaparsec (parseMaybe)
 
 
 data AttendityArg =
@@ -32,8 +33,10 @@ data Args =
 dayOnP :: Parser AttendityArg
 dayOnP =
   DayOn
-  <$> argument str (metavar "ENTER" <> help "Enter time HHMM")
-  <*> argument str (metavar "LEAVE" <> help "Leave time HHMM")
+  <$> argument (maybeReader (parseMaybe todParser . pack))
+  (metavar "ENTER" <> help "Enter time HHMM")
+  <*> argument (maybeReader (parseMaybe todParser . pack))
+  (metavar "LEAVE" <> help "Leave time HHMM")
   <*> flag newWorkdayOn newHolidayOn (long "holiday-on" <> help "Specify holiday")
 
 dayOffP :: Parser AttendityArg
@@ -60,8 +63,8 @@ run Args {..} = do
 update' :: AttendityArg -> Attendance -> ClientMonad env ()
 update' (DayOn enter' leave' attendity') att =
   updateAttendance $ att
-  & enter .~ enter'
-  & leave .~ leave'
+  & enter .~ Just enter'
+  & leave .~ Just leave'
   & attendity ?~ attendity'
 update' (DayOff attendity') att =
   updateAttendance $ att
