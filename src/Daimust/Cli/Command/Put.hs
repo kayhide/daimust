@@ -7,20 +7,19 @@ where
 
 import ClassyPrelude
 
-import Control.Lens (filtered, (&), (.~), (?~), (^.), (^..))
-import Options.Applicative
-
+import Control.Lens (filtered, (&), (?~), (^.), (^..))
 import Daimust.Config (AppIO)
 import Daimust.Daim (ClientMonad, listAttendances, moveToPeriod, runClient,
                      updateAttendance)
 import Daimust.Data.Attendance
 import qualified Daimust.Paths as Paths
+import Options.Applicative
 import Text.Megaparsec (parseMaybe)
 
 
-data AttendityArg =
-  DayOn AttendanceEnter AttendanceLeave Attendity
-  | DayOff Attendity
+data AttendityArg where
+  DayOn :: AttendanceEnter -> AttendanceLeave -> Attendity -> AttendityArg
+  DayOff :: Attendity -> AttendityArg
   deriving (Eq, Show)
 
 data Args =
@@ -63,8 +62,8 @@ run Args {..} = do
 update' :: AttendityArg -> Attendance -> ClientMonad env ()
 update' (DayOn enter' leave' attendity') att =
   updateAttendance $ att
-  & enter .~ Just enter'
-  & leave .~ Just leave'
+  & enter ?~ enter'
+  & leave ?~ leave'
   & attendity ?~ attendity'
 update' (DayOff attendity') att =
   updateAttendance $ att

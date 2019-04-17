@@ -24,14 +24,16 @@ import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.Default (def)
 import Data.Void (Void)
 import Formatting (sformat, (%))
-import Formatting.Time (hour24, minute)
+import qualified Formatting.Time as F
 import Network.URI (URI (..), parseURIReference)
 import Network.Wreq.Lens (responseBody)
 import Path (Abs, File, Path, toFilePath)
 import Path.IO (doesFileExist)
 import Text.Megaparsec
 import Text.Megaparsec.Char
+import qualified Text.Megaparsec.Char.Lexer as L
 import Text.Xml.Lens
+import Data.Time (TimeOfDay)
 
 import Debug.Trace as Debug
 
@@ -163,7 +165,7 @@ updateAttendance :: Attendance -> ClientMonad env ()
 updateAttendance att = do
   page <- authenticate
   Client { .. } <- get
-  Logger.info $ "Updating: Attendane #" <> att ^. date
+  Logger.info $ "Updating: Attendane #" <> att ^. date . to tshow
   client' <- runCrawler $ do
     putState state
     res <- postUpdate att page
@@ -175,7 +177,7 @@ deleteAttendance :: Attendance -> ClientMonad env ()
 deleteAttendance att = do
   page <- authenticate
   Client { .. } <- get
-  Logger.info $ "Deleting: Attendance #" <> att ^. date
+  Logger.info $ "Deleting: Attendance #" <> att ^. date . to tshow
   client' <- runCrawler $ do
     putState state
     res <- postDelete att =<< postCancel att page
@@ -257,18 +259,29 @@ gotoEntrance res = do
 
   pure res4
 
+
+toDateCode :: Day -> Text
+toDateCode date' =
+  sformat (F.year % F.month % F.dayOfMonth) date' date' date'
+
+toTimeCode :: TimeOfDay -> Text
+toTimeCode time' =
+  sformat (F.hour24 % F.minute) time' time'
+
+
 postUpdate :: Attendance -> Response -> Crawler Response
 postUpdate att res = do
+  let date' = toDateCode (att ^. date)
   let enter' = case att ^. enter of
-        Nothing -> ""
-        Just tod -> att ^. date <> sformat (hour24 % minute) tod tod
+        Nothing  -> ""
+        Just tod -> date' <> toTimeCode tod
   let leave' = case att ^. leave of
-        Nothing -> ""
-        Just tod -> sformat (hour24 % minute) tod tod
+        Nothing  -> ""
+        Just tod -> toTimeCode tod
   let form02 = findForm "form02" res
   let form' = form02
-              & fields . at "pn10s01" ?~ att ^. date <> ","
-              & fields . at "pn10s02" ?~ att ^. date <> ","
+              & fields . at "pn10s01" ?~ date' <> ","
+              & fields . at "pn10s02" ?~ date' <> ","
               & fields . at "pn10s03" .~ (form02 ^. fields . at "TEMP_pn00011")
               & fields . at "pn10s04" .~ (form02 ^. fields . at "TEMP_pn10009")
               & fields . at "pn10s05" ?~ ","
@@ -336,7 +349,7 @@ postCancel att res' = do
 
     params' :: Maybe (Text, Text, Text, Text)
     params' = do
-      let date' = att ^. date
+      let date' = toDateCode $ att ^. date
       let onclicks' = res' ^.. responseBody . html . selected "font" . node "a" . attr "onClick" . _Just
       onclicks' ^? traverse . to (parseMaybe onclickParser) . _Just . filtered ((== date') . (^. _1))
 
@@ -379,7 +392,7 @@ postDelete att res' = do
 
     params' :: (Text, Text, Text, Text)
     params' = do
-      let date' = att ^. date
+      let date' = toDateCode $ att ^. date
       let onclicks' = res' ^.. responseBody . html . selected "a" . attr "onclick" . _Just
       let xs = onclicks' ^? traverse . to (parseMaybe onclickParser) . _Just . filtered ((== date') . (^. _1))
       fromMaybe (date', "", "", "") xs
@@ -449,11 +462,11 @@ parseItem period' tr = headMay . catMaybes $ do
     pure $ Attendance period' date' day' dow' enter' leave' attendity' color'
 
   where
-    dateParser :: Parsec Void Text Text
+    dateParser :: Parsec Void Text Day
     dateParser = do
       between (space *> string "ymd[") (string "]" *> space) $ do
-        y <- some digitChar <* char '-'
-        m <- some digitChar <* char '-'
-        d <- some digitChar <* char '-'
+        y :: Integer <- L.decimal <* char '-'
+        m <- L.decimal <* char '-'
+        d <- L.decimal <* char '-'
         void $ some (notChar ']')
-        pure $ pack y <> pack m <> pack d
+        pure $ fromGregorian y m d

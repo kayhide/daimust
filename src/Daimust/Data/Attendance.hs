@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Daimust.Data.Attendance
   ( Attendance (..)
-  , AttendanceEnter (..)
-  , AttendanceLeave (..)
+  , AttendanceEnter
+  , AttendanceLeave
   , Attendity
   , year
   , month
@@ -28,7 +28,7 @@ import ClassyPrelude hiding (many, some, try)
 
 import Control.Lens (Field1 (..), Field2 (..), lens, makeLenses, makePrisms,
                      (^.))
-import Data.Time.LocalTime (TimeOfDay (..))
+import Data.Time (Day (..), TimeOfDay (..))
 import Data.Void (Void)
 import Text.Megaparsec
 import Text.Megaparsec.Char
@@ -78,7 +78,7 @@ instance Field2 Attendity Attendity Text Text where
 data Attendance =
   Attendance
   { _period    :: Period
-  , _date      :: Text
+  , _date      :: Day
   , _day       :: Text
   , _dow       :: Text
   , _enter     :: Maybe AttendanceEnter
