@@ -46,7 +46,7 @@ readAll = do
 
 printHistRecord :: HistRecord -> IO ()
 printHistRecord HistRecord {..} =
-  say $ tshow day <> "  " <> tshow startAt <> " - " <> tshow endAt
+  say $ unwords ([tshow day, tshow startAt, tshow endAt] :: [Text])
 
 -- | Internal helpers
 
