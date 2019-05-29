@@ -232,9 +232,9 @@ gotoEntrance res = do
 
   res2 <- do
     let onloadP = do
-          void $ many (notChar '(')
+          void $ many (anySingleBut '(')
           between (char '(') (char ')') $ many (
-            between (char '\'') (char '\'') (many (notChar '\'')) <* many (char ',')
+            between (char '\'') (char '\'') (many (anySingleBut '\'')) <* many (char ',')
             )
 
     let Just (action', username', password') = do
@@ -342,7 +342,7 @@ postCancel att res' = do
       between (string "(" <* space) (string ")" <* space) $ do
         [a, b, c, d] <- count 4 $ do
           x <- between (string "'") (string "'") $
-            pack <$> some (notChar '\'')
+            pack <$> some (anySingleBut '\'')
           string "," *> space <|> string "" *> pure ()
           pure x
         pure (a, b, c, d)
@@ -382,10 +382,10 @@ postDelete att res' = do
     onclickParser :: Parsec Void Text (Text, Text, Text, Text)
     onclickParser = do
       void $ string "delAct"
-      between (string "(" <* space) (string ")" <* many anyChar) $ do
+      between (string "(" <* space) (string ")" <* many anySingle) $ do
         [a, b, c, d, _] <- count 5 $ do
           x <- between (string "'") (string "'") $
-            pack <$> many (notChar '\'')
+            pack <$> many (anySingleBut '\'')
           string "," *> space <|> string "" *> pure ()
           pure x
         pure (a, b, c, d)
@@ -467,5 +467,5 @@ parseItem period' tr = headMay . catMaybes $ do
         y :: Integer <- L.decimal <* char '-'
         m <- L.decimal <* char '-'
         d <- L.decimal <* char '-'
-        void $ some (notChar ']')
+        void $ some (anySingleBut ']')
         pure $ fromGregorian y m d
