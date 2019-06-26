@@ -15,7 +15,7 @@ where
 
 import ClassyPrelude hiding (many, some)
 
-import Control.Lens (at, filtered, folding, indices, ix, only, to, traversed,
+import Control.Lens (at, filtered, folding, indices, ix, plate, only, to, traversed,
                      universe, view, (&), (.~), (?~), (^.), (^..), (^?), (^?!),
                      _1, _2, _Just)
 import Control.Monad.Fail (MonadFail)
@@ -32,14 +32,14 @@ import Path.IO (doesFileExist)
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
-import Text.Xml.Lens
+import Text.XML.Lens (attribute, attributeIs, comment, ell, text)
 import Data.Time (TimeOfDay)
 
 import Debug.Trace as Debug
 
 import Configurable (HasConfig, RIO, setting)
 import Daimust.Crawler (Crawler, Dom, Response, action, fields, forms, frames,
-                        getState, links, putState, refresh, runCrawler,
+                        getState, html, links, putState, refresh, runCrawler,
                         selected, src)
 import qualified Daimust.Crawler as Crawler
 import Daimust.Daim.Config
@@ -238,7 +238,7 @@ gotoEntrance res = do
             )
 
     let Just (action', username', password') = do
-          onload <- res1 ^. responseBody . html . selected "body" . attr "onLoad"
+          onload <- res1 ^. responseBody . html . selected "body" . attribute "onLoad"
           [u, p, url'] <- (parseMaybe @()) onloadP onload
           url'' <- parseURIReference url'
           pure (url'', pack u, pack p)
@@ -350,7 +350,15 @@ postCancel att res' = do
     params' :: Maybe (Text, Text, Text, Text)
     params' = do
       let date' = toDateCode $ att ^. date
-      let onclicks' = res' ^.. responseBody . html . selected "font" . node "a" . attr "onClick" . _Just
+      let onclicks' =
+            res' ^..
+              responseBody .
+              html .
+              selected "font" .
+              plate .
+              ell "a" .
+              attribute "onClick" .
+              _Just
       onclicks' ^? traverse . to (parseMaybe onclickParser) . _Just . filtered ((== date') . (^. _1))
 
 
@@ -393,7 +401,7 @@ postDelete att res' = do
     params' :: (Text, Text, Text, Text)
     params' = do
       let date' = toDateCode $ att ^. date
-      let onclicks' = res' ^.. responseBody . html . selected "a" . attr "onclick" . _Just
+      let onclicks' = res' ^.. responseBody . html . selected "a" . attribute "onclick" . _Just
       let xs = onclicks' ^? traverse . to (parseMaybe onclickParser) . _Just . filtered ((== date') . (^. _1))
       fromMaybe (date', "", "", "") xs
 
@@ -419,7 +427,7 @@ gotoCurrentPeriod res = do
 verifyResponse :: MonadFail m => Response -> m Response
 verifyResponse res = do
   let err = headMay . drop 1 $
-            res ^.. responseBody . html . selected "font" . attributed (ix "color" . only "red")
+            res ^.. responseBody . html . selected "font" . attributeIs "color" "red"
   case err ^? _Just . text of
     Just msg -> fail $ unpack msg
     Nothing  -> pure res
@@ -430,7 +438,7 @@ isEntrance res = isJust $ getPeriod res
 
 findForm :: Text -> Response -> Crawler.Form
 findForm name' res =
-  res ^?! responseBody . html . selected "form" . attributed (ix "name" . only name') . forms
+  res ^?! responseBody . html . selected "form" . attributeIs "name" name' . forms
 
 getPeriod :: Response -> Maybe Period
 getPeriod res = do
@@ -447,16 +455,16 @@ rowTexts tr = do
 
 parseItem :: Period -> Dom -> Maybe Attendance
 parseItem period' tr = headMay . catMaybes $ do
-  comment <- tr ^.. selected "" . comments
+  comment <- tr ^.. selected "" . comment
   pure $ do
     let cells = rowTexts tr
     dow' <- cells ^? ix 1
     hours <- cells ^? ix 10
     let (enter', leave') = maybe (Nothing, Nothing) (Just *** Just) $ parseHours hours
     let attendity' = do
-          value' <- (tr ^.. selected "td") ^. ix 12 . selected "input" . attr "value"
+          value' <- (tr ^.. selected "td") ^. ix 12 . selected "input" . attribute "value"
           toAttendity value' $ cells ^? ix 12
-    color' <- headMay . catMaybes $ tr ^.. selected "td" . attr "bgcolor"
+    color' <- headMay . catMaybes $ tr ^.. selected "td" . attribute "bgcolor"
     date' <- parseMaybe dateParser comment
     pure $ Attendance period' date' dow' enter' leave' attendity' color'
 

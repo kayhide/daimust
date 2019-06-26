@@ -31,11 +31,10 @@ import Control.Lens (makeFields)
 import qualified Data.ByteString.Lazy as BL
 import Network.URI (URI)
 import qualified Network.Wreq as Wreq
-import qualified Text.Xml.Lens as Xml
-
+import qualified Text.XML as XML
 
 type Response = Wreq.Response BL.ByteString
-type Dom = Xml.Element
+type Dom = XML.Element
 
 data Form = Form
   { _formAction :: URI
