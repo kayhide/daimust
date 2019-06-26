@@ -21,7 +21,6 @@ import Daimust.Crawler.Type (Form, Link, action, dom, fields, href)
 -- * Formmatting dom element
 
 formatElement :: Xml.Element -> Text
--- formatElement x = toStrict $ x ^. Xml.renderWith (rsPretty .~ True)
 formatElement x =
   let renderSettings = def { rsPretty = True }
       doc = elementToDocument x

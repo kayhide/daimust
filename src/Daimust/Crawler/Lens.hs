@@ -105,7 +105,7 @@ innerText = dom . folding universe . text . to (unwords . words)
 
 
 unescapeHtmlEntity :: Text -> Text
-unescapeHtmlEntity = view (to (encodeUtf8 . fromStrict) . html . text)
+unescapeHtmlEntity = view $ to (encodeUtf8 . fromStrict) . html . text
 
 html :: Fold LByteString Xml.Element
 html = to parseLBS . root
