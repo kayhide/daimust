@@ -7,7 +7,9 @@ import Control.Lens (Fold, Prism', filtered, folded, folding, ix, only, prism,
                      to, universe, view, (^.), (^..), (^?), _Just)
 import qualified Data.Map as Map
 import Network.URI
-import Text.Xml.Lens (attr, attributed, html, name, named, text)
+import Text.HTML.DOM (parseLBS)
+import qualified Text.XML as Xml
+import Text.XML.Lens (attribute, attributeIs, attributeSatisfies, ell, localName, root, text)
 
 import Daimust.Crawler.DomSelector
 import Daimust.Crawler.Type
@@ -20,11 +22,11 @@ _URI = prism tshow $ \s -> maybe (Left s) Right (parseURIReference $ unpack s)
 selected :: DomSelector -> Fold Dom Dom
 selected (DomSelector factors) = folding universe . filtered' factors
   where
+    filtered' :: [DomFactor] -> Fold Dom Dom
     filtered' [] = filtered (const True)
-    filtered' (DomName x : xs) = named (only name') . filtered' xs
-      where name' = fromString $ unpack x
-    filtered' (DomId x : xs) = attributed (ix "id" . only x) . filtered' xs
-    filtered' (DomClass x : xs) = attributed (ix "class" . to words . folded . only x) . filtered' xs
+    filtered' (DomName x : xs) = ell x . filtered' xs
+    filtered' (DomId x : xs) = attributeIs "id" x . filtered' xs
+    filtered' (DomClass x : xs) = attributeSatisfies "class" (\att -> x `elem` words att) . filtered' xs
 
 
 forms :: Fold Dom Form
@@ -35,20 +37,20 @@ _Form = prism (^. dom) $ \s -> maybe (Left s) Right (toForm s)
 
 toForm :: Dom -> Maybe Form
 toForm element = do
-  guard $ element ^. name == "form"
+  guard $ element ^. localName == "form"
   pure $ Form (fromMaybe emptyUrl action') fields' element
   where
-    action' = element ^? attr "action" . _Just . to unescapeHtmlEntity . _URI
+    action' = element ^? attribute "action" . _Just . to unescapeHtmlEntity . _URI
 
     fields' = Map.fromList $ inputs' <> options'
     inputs' = element ^.. inputs . to (view key &&& view value)
 
-    selects' = element ^.. selected "select" . attributed (ix "name")
+    selects' = element ^.. selected "select" . attributeSatisfies "name" (const True)
     options' = do
       e <- selects'
       maybe [] pure $ do
-        k <- e ^. attr "name"
-        v <- e ^. selected "option" . attributed (ix "selected") . attr "value"
+        k <- e ^. attribute "name"
+        v <- e ^. selected "option" . attributeSatisfies "selected" (const True) . attribute "value"
         pure (k, v)
 
     emptyUrl = URI "" Nothing "" "" ""
@@ -62,10 +64,10 @@ _Input = prism (^. dom) $ \s -> maybe (Left s) Right (toInput s)
 
 toInput :: Dom -> Maybe Input
 toInput element = do
-  name' <- element ^. attr "name"
+  name' <- element ^. attribute "name"
   pure $ Input name' value' element
   where
-    value' = element ^. attr "value" . folded
+    value' = element ^. attribute "value" . folded
 
 
 links :: Fold Dom Link
@@ -76,7 +78,7 @@ _Link = prism (^. dom) $ \s -> maybe (Left s) Right (toLink s)
 
 toLink :: Dom -> Maybe Link
 toLink element = do
-  href' <- element ^? attr "href" . _Just . to unescapeHtmlEntity . _URI
+  href' <- element ^? attribute "href" . _Just . to unescapeHtmlEntity . _URI
   pure $ Link href' element
 
 
@@ -88,15 +90,15 @@ _Frame = prism (^. dom) $ \s -> maybe (Left s) Right (toFrame s)
 
 toFrame :: Dom -> Maybe Frame
 toFrame element = do
-  src' <- element ^? attr "src" . _Just . to unescapeHtmlEntity . _URI
+  src' <- element ^? attribute "src" . _Just . to unescapeHtmlEntity . _URI
   pure $ Frame src' element
 
 
 domId :: (HasDom s Dom) => Fold s Text
-domId = dom . attr "id" . folded
+domId = dom . attribute "id" . folded
 
 domClass :: (HasDom s Dom) => Fold s Text
-domClass = dom . attr "class" . folded . to words . folded
+domClass = dom . attribute "class" . folded . to words . folded
 
 innerText :: (HasDom s Dom) => Fold s Text
 innerText = dom . folding universe . text . to (unwords . words)
@@ -104,3 +106,6 @@ innerText = dom . folding universe . text . to (unwords . words)
 
 unescapeHtmlEntity :: Text -> Text
 unescapeHtmlEntity = view $ to (encodeUtf8 . fromStrict) . html . text
+
+html :: Fold LByteString Xml.Element
+html = to parseLBS . root

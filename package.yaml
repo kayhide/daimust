@@ -24,6 +24,7 @@ dependencies:
   - extensible
   - filepath
   - formatting
+  - html-conduit
   - http-client
   - http-client-tls
   - lens
@@ -50,7 +51,8 @@ dependencies:
   - unordered-containers
   - vector
   - wreq
-  - xml-html-conduit-lens
+  - xml-conduit
+  - xml-lens
 
 default-extensions:
   - AutoDeriveTypeable
