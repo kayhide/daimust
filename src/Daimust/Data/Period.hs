@@ -14,6 +14,7 @@ import ClassyPrelude hiding (many, some)
 import Control.Lens (makeLenses)
 import Data.Void (Void)
 import Formatting (int, left, sformat, (%), (%.))
+import Test.QuickCheck (Arbitrary (..), choose)
 import Text.Megaparsec (Parsec, count, many, parseMaybe)
 import Text.Megaparsec.Char (char, digitChar)
 
@@ -54,3 +55,8 @@ periodP = do
 
 parsePeriodMaybe :: Text -> Maybe Period
 parsePeriodMaybe = parseMaybe periodP
+
+
+-- | Arbitrary instance
+instance Arbitrary Period where
+  arbitrary = Period <$> choose (0, 9999) <*> choose (1, 12)

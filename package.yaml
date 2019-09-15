@@ -10,6 +10,7 @@ extra-source-files:
   - README.md
 
 dependencies:
+  - QuickCheck
   - ansi-terminal
   - async
   - base
@@ -103,23 +104,26 @@ library:
 
 executables:
   daimust:
-    main:                Main.hs
-    source-dirs:         app
+    main: Main.hs
+    source-dirs: app
     ghc-options:
       - -threaded
       - -rtsopts
       - -with-rtsopts=-N
-      - -main-is Main
+      - -optP-Wno-nonportable-include-path
     dependencies:
       - daimust
 
 tests:
-  daimust-test:
-    main:                Spec.hs
-    source-dirs:         test
+  tasty:
+    main: Main.hs
+    source-dirs: test/tasty
     ghc-options:
       - -threaded
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
       - daimust
+      - tasty
+      - tasty-hunit
+      - tasty-quickcheck
