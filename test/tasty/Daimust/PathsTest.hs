@@ -75,16 +75,11 @@ tests_getCacheFile =
 tests_lookupFocus :: TestTree
 tests_lookupFocus =
   after AllFinish "getDaimustDir" $
-  after AllFinish "getCacheFile" $
   testProperty "lookupFocus" $
   \(period :: Maybe Period) -> monadicIO $ do
-    x <- run $ do
-      dir' <- getTempDir
-      withTempDir dir' "daimust" $ \dir'' ->
-        withEnv "DAIMUST_DIR" (toFilePath dir'') $
-          runApp $ do
-            maybe unfocus focus period
-            lookupFocus
+    x <- run . runApp $ do
+      maybe unfocus focus period
+      lookupFocus
     assert $ x == period
 
 
